@@ -1,0 +1,413 @@
+@model DrugInventoryPro.Models.Medicines
+@{
+    ViewData["Title"] = "เพิ่มรายการยาและเวชภัณฑ์";
+}
+
+<style>
+    /* กำหนดตัวแปรชุดสีให้สอดคล้องกับระบบหลัก */
+    :root {
+        --theme-dark: #212529;
+        --theme-primary: #0d6efd;
+        --theme-primary-hover: #0b5ed7;
+        --theme-white: #ffffff;
+        --theme-border: #ced4da;
+        --theme-focus-ring: rgba(13, 110, 253, 0.25);
+    }
+
+    .form-card {
+        background: var(--theme-white);
+        border: 2px solid var(--theme-dark);
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 860px;
+        margin: 0 auto;
+    }
+
+    .form-label {
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--theme-dark);
+    }
+
+    .form-control, .form-select {
+        border: 1.5px solid var(--theme-border);
+        border-radius: 8px;
+        padding: 10px 14px;
+    }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--theme-primary);
+            box-shadow: 0 0 0 3px var(--theme-focus-ring);
+            outline: none;
+        }
+
+    .section-header {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--theme-primary);
+        border-bottom: 2px solid var(--theme-primary);
+        padding-bottom: 6px;
+        margin-bottom: 18px;
+    }
+
+    .btn-save {
+        background: var(--theme-primary);
+        color: var(--theme-white);
+        border: none;
+        padding: 10px 32px;
+        border-radius: 8px;
+        font-weight: 700;
+        transition: all 0.2s;
+    }
+
+        .btn-save:hover {
+            background: var(--theme-primary-hover);
+            color: var(--theme-white);
+        }
+
+    .btn-cancel {
+        background: var(--theme-white);
+        color: var(--theme-dark);
+        border: 2px solid var(--theme-dark);
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: 700;
+        transition: all 0.2s;
+    }
+
+        .btn-cancel:hover {
+            background: var(--theme-dark);
+            color: var(--theme-white);
+        }
+
+    .id-badge {
+        background: var(--theme-dark);
+        color: var(--theme-white);
+        font-family: monospace;
+        font-size: 14px;
+        padding: 6px 16px;
+        border-radius: 20px;
+        display: inline-block;
+    }
+
+    /* กล่องแจ้งเตือนข้อมูลซ้ำ */
+    .duplicate-box {
+        background: rgba(13, 110, 253, 0.03);
+        border: 2px dashed var(--theme-primary);
+        border-radius: 12px;
+        padding: 20px;
+    }
+
+    .duplicate-radio-card {
+        background: var(--theme-white);
+        border: 1.5px solid var(--theme-dark);
+        border-radius: 8px;
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .duplicate-radio-card:hover {
+            border-color: var(--theme-primary);
+            background: rgba(13, 110, 253, 0.05);
+        }
+
+    /* CSS สำหรับสถานะการเลือก Radio การจัดการข้อมูลซ้ำ */
+    .form-check-input:checked + .form-check-label .duplicate-radio-card {
+        border-color: var(--theme-primary);
+        background: rgba(13, 110, 253, 0.05);
+        box-shadow: 0 0 0 3px var(--theme-focus-ring);
+    }
+</style>
+
+<div class="container py-4">
+    <div class="form-card shadow-sm">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="fw-bold mb-1"><i class="bi bi-plus-circle-fill me-2 text-primary"></i>เพิ่มรายการยาและเวชภัณฑ์</h4>
+                <small class="text-muted">รหัสล่าสุดในระบบ: <span class="id-badge">@ViewBag.NextId</span></small>
+            </div>
+            <a asp-action="Index" class="btn-cancel text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i>กลับ
+            </a>
+        </div>
+
+        @* แสดง Error ถ้าเกิดข้อผิดพลาดของ Model Validation *@
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger rounded-3 border-2 border-danger mb-4">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>กรุณาตรวจสอบข้อมูล:</strong>
+                <ul class="mb-0 mt-1">
+                    @foreach (var state in ViewData.ModelState.Values)
+                    {
+                        foreach (var error in state.Errors)
+                        {
+                            if (!string.IsNullOrEmpty(error.ErrorMessage))
+                            {
+                                <li>@error.ErrorMessage</li>
+                            }
+                        }
+                    }
+                </ul>
+            </div>
+        }
+
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            @* ── ส่วนพิเศษ: แจ้งเตือนเมื่อพบรายการยาที่กรอกซ้ำกันในระบบ ── *@
+            @if (ViewBag.DuplicateFound == true)
+            {
+                <div class="duplicate-box mb-4 animate__animated animate__fadeIn">
+                    <h5 class="fw-bold text-danger mb-2">
+                        <i class="bi bi-exclamation-octagon-fill me-2"></i>พบข้อมูลรายการยาซ้ำในคลัง!
+                    </h5>
+                    <p class="text-muted small mb-3">@ViewBag.DuplicateMessage</p>
+
+                    <label class="form-label mb-2 d-block">กรุณาเลือกวิธีการดำเนินการจัดการข้อมูล:</label>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <input class="form-check-input d-none" type="radio" name="duplicateAction" id="actionUpdateStock" value="UpdateStock" checked />
+                            <label class="form-check-label w-100" for="actionUpdateStock">
+                                <div class="duplicate-radio-card">
+                                    <div class="fw-bold text-dark"><i class="bi bi-plus-square-fill me-2 text-success"></i>อัปเดตจำนวนสต็อกเดิม</div>
+                                    <small class="text-muted">นำจำนวนรับเข้าที่กรอกใหม่ ไปบวกเพิ่มเข้าไปในรายการยาตัวเดิมในระบบ</small>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-md-6">
+                            <input class="form-check-input d-none" type="radio" name="duplicateAction" id="actionReplaceOld" value="ReplaceOld" />
+                            <label class="form-check-label w-100" for="actionReplaceOld">
+                                <div class="duplicate-radio-card">
+                                    <div class="fw-bold text-dark"><i class="bi bi-arrow-left-right me-2 text-warning"></i>ทดแทนและปิดรายการเก่า</div>
+                                    <small class="text-muted">เปลี่ยนสถานะยาตัวเดิมเป็น "ไม่ใช้งาน" และสร้างรายการล็อตใหม่นี้แยกออกมาแทน</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @* ── ส่วนเลือกประเภทรับเข้า ── *@
+            <div class="mb-4 p-3" style="background-color: rgba(13, 110, 253, 0.03); border: 2px solid var(--theme-dark); border-radius: 12px;">
+                <label class="form-label fw-bold mb-2">เลือกหมวดหมู่ที่ต้องการรับเข้า <span class="text-danger">*</span></label>
+                <div class="d-flex gap-4">
+                    <div class="form-check">
+                        <input class="form-check-input border-dark" type="radio" name="ItemType" id="typeMed" value="MED" checked onchange="updatePrefix()">
+                        <label class="form-check-label fw-bold text-primary" style="cursor: pointer;" for="typeMed" id="labelTypeMed">
+                            <i class="bi bi-capsule me-1"></i> รับยา (MED)
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input border-dark" type="radio" name="ItemType" id="typeSup" value="SUP" onchange="updatePrefix()">
+                        <label class="form-check-label fw-bold text-dark" style="cursor: pointer;" for="typeSup" id="labelTypeSup">
+                            <i class="bi bi-bandaid me-1"></i> รับเวชภัณฑ์ (SUP)
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            @* ── ส่วนที่ 1: ข้อมูลพื้นฐาน ── *@
+            <div class="section-header mb-3">ข้อมูลพื้นฐาน</div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label">
+                        รหัส (Item ID) <span class="text-danger">*</span>
+                        <small class="text-muted fw-normal">(สร้างให้อัตโนมัติ)</small>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted"><i class="bi bi-lock-fill"></i></span>
+                        <input asp-for="Medicine_id"
+                               id="medicine_id_input"
+                               class="form-control fw-bold bg-light text-primary"
+                               style="font-family: monospace; font-size: 15px;"
+                               value="@(Model?.Medicine_id ?? ViewBag.NextId)"
+                               readonly
+                               required
+                               autocomplete="off" />
+                    </div>
+                    <span asp-validation-for="Medicine_id" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">ชื่อยา / เวชภัณฑ์ <span class="text-danger">*</span></label>
+                    <input asp-for="Medicine_name" class="form-control" placeholder="เช่น Amoxicillin 500mg" required />
+                    <span asp-validation-for="Medicine_name" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">หมวดหมู่ <span class="text-danger">*</span></label>
+                    <select asp-for="Category_id" class="form-select" required>
+                        <option value="">-- เลือกหมวดหมู่ --</option>
+                        @if (ViewBag.Categories != null)
+                        {
+                            foreach (var c in ViewBag.Categories)
+                            {
+                                <option value="@c.Category_id">@c.Category_name</option>
+                            }
+                        }
+                    </select>
+                    <span asp-validation-for="Category_id" class="text-danger small"></span>
+                </div>
+            </div>
+
+            @* ── ส่วนที่ 2: สต็อกและราคา ── *@
+            <div class="section-header mb-3">สต็อกและราคา</div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <label class="form-label">จำนวนรับเข้า <span class="text-danger">*</span></label>
+                    <input asp-for="Quantity" type="number" min="0" class="form-control" placeholder="0" required />
+                    <span asp-validation-for="Stock" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">จำนวนขั้นต่ำ (เตือนสต็อกต่ำ)</label>
+                    <input asp-for="SafetyStock" type="number" min="0" class="form-control" placeholder="10" />
+                    <span asp-validation-for="SafetyStock" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">หน่วยนับ</label>
+                    <select asp-for="Unit_id" class="form-select">
+                        <option value="">-- เลือกหน่วยนับ --</option>
+                        @if (ViewBag.Units != null)
+                        {
+                            foreach (var unit in ViewBag.Units)
+                            {
+                                <option value="@unit.Unit_id">@unit.Unit_name (@unit.Group_name)</option>
+                            }
+                        }
+                    </select>
+                    <span asp-validation-for="Unit_id" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">ราคาทุน (บาท)</label>
+                    <input asp-for="Price" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" />
+                    <span asp-validation-for="Price" class="text-danger small"></span>
+                </div>
+            </div>
+
+            @* ── ส่วนที่ 3: ล็อตและวันหมดอายุ ── *@
+            <div class="section-header mb-3">ล็อตและวันหมดอายุ</div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label">เลขล็อต (Lot Number)</label>
+                    <input asp-for="Lot" class="form-control" placeholder="เช่น LOT-20240101" />
+                    <span asp-validation-for="Lot" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">วันหมดอายุ</label>
+                    <input asp-for="Expired_at" type="date" class="form-control" />
+                    <span asp-validation-for="Expired_at" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">ขนาดบรรจุ (Packing)</label>
+                    <input asp-for="Packing_Size" class="form-control" placeholder="เช่น 10 เม็ด/แผง" />
+                    <span asp-validation-for="Packing_Size" class="text-danger small"></span>
+                </div>
+            </div>
+
+            @* ── ส่วนที่ 4: ข้อมูลเพิ่มเติม ── *@
+            <div class="section-header mb-3">ข้อมูลเพิ่มเติม</div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label">ประเภทบัญชียา</label>
+                    <select asp-for="Account_Type" class="form-select">
+                        <option value="">-- เลือกประเภท --</option>
+                        <option value="NED">บัญชียา NED</option>
+                        <option value="ED">บัญชียา ED</option>
+                    </select>
+                    <span asp-validation-for="Account_Type" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">สถานะ</label>
+                    <select asp-for="Status" class="form-select">
+                        <option value="Active">ใช้งานอยู่</option>
+                        <option value="Inactive">ไม่ใช้งาน</option>
+                    </select>
+                    <span asp-validation-for="Status" class="text-danger small"></span>
+                </div>
+            </div>
+
+            @* ── ปุ่มบันทึกข้อมูล ── *@
+            <div class="d-flex gap-3 pt-2 border-top mt-2">
+                @if (ViewBag.DuplicateFound == true)
+                {
+                    <button type="submit" class="btn-save">
+                        <i class="bi bi-check-circle-fill me-2"></i>ยืนยันจัดการข้อมูลซ้ำ
+                    </button>
+                }
+                else
+                {
+                    <button type="submit" class="btn-save">
+                        <i class="bi bi-floppy-fill me-2"></i>บันทึกข้อมูล
+                    </button>
+                }
+                <a asp-action="Index" class="btn-cancel text-decoration-none">ยกเลิก</a>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        // ฟังก์ชันเปลี่ยน Prefix ของรหัสสินค้า (MED / SUP)
+        function updatePrefix() {
+            const isMed = document.getElementById('typeMed').checked;
+            const inputId = document.getElementById('medicine_id_input');
+            const targetPrefix = isMed ? "MED" : "SUP";
+
+            // ดึง Label มาเพื่อจัดการสลับ Class สี
+            const labelMed = document.getElementById('labelTypeMed');
+            const labelSup = document.getElementById('labelTypeSup');
+
+            // สลับเฉพาะคำนำหน้า MED/SUP โดยคงตัวเลขด้านหลังไว้เหมือนเดิม
+            if (inputId.value) {
+                inputId.value = inputId.value.replace(/^(MED|SUP)/i, targetPrefix);
+            } else {
+                inputId.value = targetPrefix;
+            }
+
+            // จัดการสีของ Text Input และ Label เมื่อสลับ Radio
+            if (isMed) {
+                inputId.style.color = "#0d6efd"; // สีน้ำเงิน
+                labelMed.classList.replace("text-dark", "text-primary");
+                labelSup.classList.replace("text-primary", "text-dark");
+            } else {
+                inputId.style.color = "#212529"; // สีเทาเข้ม
+                labelSup.classList.replace("text-dark", "text-primary");
+                labelMed.classList.replace("text-primary", "text-dark");
+            }
+        }
+
+        // ตรวจสอบและตั้งค่าเริ่มต้นเมื่อโหลดหน้าเว็บ
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputId = document.getElementById('medicine_id_input');
+
+            if (inputId.value) {
+                if (inputId.value.startsWith('SUP')) {
+                    document.getElementById('typeSup').checked = true;
+                    // บังคับเรียกใช้เพื่อสลับสีให้ถูกต้อง
+                    updatePrefix();
+                } else {
+                    document.getElementById('typeMed').checked = true;
+                    updatePrefix();
+                }
+            } else {
+                updatePrefix();
+            }
+        });
+    </script>
+}

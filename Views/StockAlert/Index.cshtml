@@ -1,0 +1,401 @@
+﻿@model IEnumerable<DrugInventoryPro.Models.Medicines>
+
+@{
+    ViewData["Title"] = "จัดการล็อตและวันหมดอายุ (FEFO / FIFO)";
+
+    // จัดเรียงข้อมูลตาม FEFO (First Expired, First Out) - ล็อตที่หมดอายุก่อนจะขึ้นก่อนเสมอ
+    var fefoList = Model?.OrderBy(m => m.Expired_at.HasValue ? m.Expired_at.Value : DateTime.MaxValue).ToList();
+
+    var today = DateTime.Today;
+    var thirtyDaysFromNow = today.AddDays(30);
+
+    // คำนวณสรุปข้อมูลสำหรับ Stats Cards
+    int totalLots = fefoList?.Count ?? 0;
+    int expiredCount = fefoList?.Count(m => m.Expired_at.HasValue && m.Expired_at.Value.Date < today) ?? 0;
+    int expiringSoonCount = fefoList?.Count(m => m.Expired_at.HasValue && m.Expired_at.Value.Date >= today && m.Expired_at.Value.Date <= thirtyDaysFromNow) ?? 0;
+    int normalCount = totalLots - expiredCount - expiringSoonCount;
+}
+
+<style>
+    /* 🌟 Ergonomic Medical UI/UX Theme (Prevent Alert Fatigue) */
+    :root {
+        --med-primary: #026AA7;
+        --med-bg: #F8FAFC;
+        --med-card-bg: #FFFFFF;
+        --med-text-main: #1E293B;
+        --med-text-muted: #64748B;
+        --med-border: #E2E8F0;
+        --med-header-bg: #F0F9FF;
+        /* FEFO Alert Colors */
+        --alert-danger-text: #DC2626;
+        --alert-danger-bg: #FEF2F2;
+        --alert-danger-border: #FECACA;
+        --alert-warning-text: #B45309;
+        --alert-warning-bg: #FFFBEB;
+        --alert-warning-border: #FDE68A;
+        --alert-success-text: #059669;
+        --alert-success-bg: #ECFDF5;
+        --alert-success-border: #A7F3D0;
+    }
+
+    body {
+        background-color: var(--med-bg);
+        font-family: 'Sarabun', sans-serif;
+        color: var(--med-text-main);
+    }
+
+    .page-title {
+        color: var(--med-text-main);
+        font-weight: 700;
+        font-size: 1.4rem;
+    }
+
+    .page-subtitle {
+        color: var(--med-text-muted);
+        font-size: 0.875rem;
+    }
+
+    /* Stats Cards */
+    .stat-card {
+        border: 1px solid var(--med-border);
+        border-radius: 10px;
+        background: #FFFFFF;
+        padding: 16px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    /* Card & Table */
+    .card-med-table {
+        border: 1px solid var(--med-border);
+        border-radius: 12px;
+        background: var(--med-card-bg);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+        overflow: hidden;
+    }
+
+    .table-med {
+        margin: 0;
+    }
+
+        .table-med thead {
+            background-color: var(--med-header-bg);
+            border-bottom: 1px solid var(--med-border);
+        }
+
+            .table-med thead th {
+                color: #0369A1;
+                font-weight: 700;
+                font-size: 0.875rem;
+                padding: 14px 16px;
+                border: none;
+                vertical-align: middle;
+            }
+
+        .table-med tbody td {
+            padding: 14px 16px;
+            color: var(--med-text-main);
+            border-bottom: 1px solid #F1F5F9;
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+
+        .table-med tbody tr:hover {
+            background-color: #F8FAFC;
+        }
+
+    /* Soft Alert Badges */
+    .badge-med-alert {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .badge-critical {
+        background-color: var(--alert-danger-bg);
+        color: var(--alert-danger-text);
+        border: 1px solid var(--alert-danger-border);
+    }
+
+    .badge-warning {
+        background-color: var(--alert-warning-bg);
+        color: var(--alert-warning-text);
+        border: 1px solid var(--alert-warning-border);
+    }
+
+    .badge-success {
+        background-color: var(--alert-success-bg);
+        color: var(--alert-success-text);
+        border: 1px solid var(--alert-success-border);
+    }
+
+    .code-badge {
+        background-color: #F1F5F9;
+        color: #475569;
+        border: 1px solid #CBD5E1;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-family: monospace;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .lot-badge {
+        background-color: #EFF6FF;
+        color: #1D4ED8;
+        border: 1px solid #BFDBFE;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-family: monospace;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+</style>
+
+<div class="container py-4">
+
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom" style="border-color: var(--med-border) !important;">
+        <div>
+            <h2 class="page-title mb-1 d-flex align-items-center gap-2">
+                <i class="bi bi-box-seam-fill text-primary"></i>
+                <span>จัดการล็อตและวันหมดอายุ (FEFO / FIFO)</span>
+            </h2>
+            <p class="page-subtitle mb-0">ตรวจสอบเลขล็อต วันหมดอายุ และจัดลำดับการจ่ายยาเพื่อป้องกันการจ่ายยาเสื่อมสภาพ</p>
+        </div>
+    </div>
+
+    <!-- Summary Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="text-muted small fw-bold">ล็อตยาทั้งหมด</div>
+                <div class="stat-number text-dark mt-1">@totalLots <span class="fs-6 text-muted fw-normal">รายการ</span></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="border-left: 4px solid var(--alert-danger-text);">
+                <div class="text-danger small fw-bold">หมดอายุแล้ว (ห้ามจ่าย)</div>
+                <div class="stat-number text-danger mt-1">@expiredCount <span class="fs-6 text-muted fw-normal">รายการ</span></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="border-left: 4px solid var(--alert-warning-text);">
+                <div class="text-warning small fw-bold">ใกล้หมดอายุ (ต้องเร่งจ่าย FEFO)</div>
+                <div class="stat-number text-warning mt-1">@expiringSoonCount <span class="fs-6 text-muted fw-normal">รายการ</span></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="border-left: 4px solid var(--alert-success-text);">
+                <div class="text-success small fw-bold">สถานะปกติ</div>
+                <div class="stat-number text-success mt-1">@normalCount <span class="fs-6 text-muted fw-normal">รายการ</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="card p-3 mb-4 border-0 shadow-sm" style="background-color: #FFFFFF; border-radius: 10px;">
+        <div class="row g-2 align-items-center">
+            <!-- ค้นหา -->
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="ค้นหา รหัสยา, ชื่อยา หรือ เลขล็อต (Lot No.)...">
+                </div>
+            </div>
+
+            <!-- ตัวกรองสถานะ -->
+            <div class="col-md-4">
+                <select id="statusFilter" class="form-select">
+                    <option value="ALL">-- แสดงรายการทั้งหมด --</option>
+                    <option value="EXPIRED">❌ หมดอายุแล้ว (Expired)</option>
+                    <option value="EXPIRING_SOON">⚠️ ใกล้หมดอายุภายใน 30 วัน (FEFO Alert)</option>
+                    <option value="NORMAL">✅ สถานะปกติ (Normal)</option>
+                </select>
+            </div>
+
+            <!-- ปุ่มทางลัด Quick Filter -->
+            <div class="col-md-3 text-end">
+                <button type="button" class="btn btn-outline-warning w-100 fw-bold" onclick="filterExpiringSoon()">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> ยาเร่งจ่าย (FEFO)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Data Table Card -->
+    <div class="card card-med-table">
+        <div class="table-responsive">
+            <table class="table table-med table-hover w-100" id="lotTable">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 12%;">เลขล็อต (Lot)</th>
+                        <th class="text-center" style="width: 12%;">รหัสยา</th>
+                        <th style="width: 26%;">ชื่อเวชภัณฑ์/ยา</th>
+                        <th class="text-center" style="width: 12%;">คงเหลือ (สต็อก)</th>
+                        <th class="text-center" style="width: 13%;">วันหมดอายุ</th>
+                        <th class="text-center" style="width: 25%;">ลำดับการจ่ายยา & สถานะ (FEFO)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (fefoList != null && fefoList.Any())
+                    {
+                        foreach (var item in fefoList)
+                        {
+                            bool isExpired = item.Expired_at.HasValue && item.Expired_at.Value.Date < today;
+                            bool isExpiringSoon = item.Expired_at.HasValue && item.Expired_at.Value.Date >= today && item.Expired_at.Value.Date <= thirtyDaysFromNow;
+
+                            string filterCategory = isExpired ? "EXPIRED" : (isExpiringSoon ? "EXPIRING_SOON" : "NORMAL");
+
+                            <tr class="lot-row" data-category="@filterCategory">
+                                <!-- Lot Number -->
+                                <td class="text-center">
+                                    <span class="lot-badge lot-text">
+                                        <i class="bi bi-tag-fill me-1"></i>@(string.IsNullOrEmpty(item.Lot) ? "N/A" : item.Lot)
+                                    </span>
+                                </td>
+
+                                <!-- Medicine ID -->
+                                <td class="text-center">
+                                    <span class="code-badge">@item.Medicine_id</span>
+                                </td>
+
+                                <!-- Medicine Name -->
+                                <td class="fw-bold text-dark search-target">
+                                    <i class="bi bi-capsule-pill me-1 text-primary"></i>
+                                    @(item.Medicine_name ?? "ไม่ระบุชื่อยา")
+                                </td>
+
+                                <!-- Stock Count -->
+                                <td class="text-center fw-bold fs-6 text-dark">
+                                    @(item.Stock ?? 0) @(item.MedicineUnit?.Unit_name ?? "หน่วย")
+                                </td>
+
+                                <!-- Expiry Date -->
+                                <td class="text-center fw-semibold @(isExpired ? "text-danger" : (isExpiringSoon ? "text-warning" : "text-dark"))">
+                                    @if (item.Expired_at.HasValue)
+                                    {
+                                        <i class="bi bi-calendar-event me-1"></i>
+                                        @item.Expired_at.Value.ToString("dd/MM/yyyy")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+
+                                <!-- FEFO Status / Action Badges -->
+                                <td class="text-center">
+                                    <div class="d-flex flex-column gap-1 align-items-center">
+                                        @if (isExpired)
+                                        {
+                                            <span class="badge-med-alert badge-critical">
+                                                <i class="bi bi-x-circle-fill"></i> หมดอายุ! ห้ามจ่ายยา 
+                                            </span>
+                                        }
+                                        else if (isExpiringSoon)
+                                        {
+                                            <span class="badge-med-alert badge-warning">
+                                                <i class="bi bi-arrow-up-circle-fill"></i> จ่ายล็อตนี้ก่อน 
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge-med-alert badge-success">
+                                                <i class="bi bi-check-circle-fill"></i> ปกติ
+                                            </span>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <div class="d-flex flex-column align-items-center gap-2">
+                                    <i class="bi bi-box-seam text-secondary" style="font-size: 2.5rem;"></i>
+                                    <span class="fw-bold text-dark">ไม่พบข้อมูลล็อตยาในระบบ</span>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                    <!-- Row สำหรับกรณีค้นหา/กรองแล้วไม่พบข้อมูล -->
+                    <tr id="noFilterMatchRow" style="display: none;">
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <div class="d-flex flex-column align-items-center gap-2">
+                                <i class="bi bi-search text-secondary" style="font-size: 2.5rem;"></i>
+                                <span class="fw-bold text-dark">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript ค้นหาและกรองแบบ Real-time (ปรับปรุงประสิทธิภาพการค้นหา) -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("searchInput");
+        const statusFilter = document.getElementById("statusFilter");
+        const rows = document.querySelectorAll(".lot-row");
+        const noFilterMatchRow = document.getElementById("noFilterMatchRow");
+
+        function filterData() {
+            const query = searchInput.value.toLowerCase().trim();
+            const selectedStatus = statusFilter.value;
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                // ดึงเฉพาะข้อมูลในฟิลด์ที่ต้องการค้นหา เพื่อป้องกันการจับคำผิดจากข้อความใน Badge สถานะ
+                const lotText = row.querySelector(".lot-text")?.innerText.toLowerCase() || "";
+                const codeText = row.querySelector(".code-badge")?.innerText.toLowerCase() || "";
+                const nameText = row.querySelector(".search-target")?.innerText.toLowerCase() || "";
+
+                const matchesSearch = !query || lotText.includes(query) || codeText.includes(query) || nameText.includes(query);
+                const category = row.getAttribute("data-category");
+                const matchesStatus = (selectedStatus === "ALL" || category === selectedStatus);
+
+                if (matchesSearch && matchesStatus) {
+                    row.style.display = "";
+                    visibleCount++;
+                } else {
+                    row.style.display = "none";
+                }
+            });
+
+            // ควบคุมการแสดงผล Row กรณีไม่พบข้อมูลค้นหา
+            if (noFilterMatchRow) {
+                noFilterMatchRow.style.display = (visibleCount === 0 && rows.length > 0) ? "" : "none";
+            }
+        }
+
+        searchInput.addEventListener("input", filterData);
+        statusFilter.addEventListener("change", filterData);
+    });
+
+    function filterExpiringSoon() {
+        const statusFilter = document.getElementById("statusFilter");
+        statusFilter.value = "EXPIRING_SOON";
+        statusFilter.dispatchEvent(new Event("change"));
+    }
+</script>

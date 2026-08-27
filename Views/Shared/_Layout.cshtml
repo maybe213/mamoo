@@ -1,0 +1,388 @@
+﻿@using Microsoft.AspNetCore.Http
+@{
+    var role = Context.Session.GetString("Role");
+    var fullName = Context.Session.GetString("FullName") ?? "ผู้ใช้งานระบบ";
+    var thCulture = new System.Globalization.CultureInfo("th-TH");
+    var currentMonthName = DateTime.Now.ToString("MMMM yyyy", thCulture);
+    var startSixMonthsAgo = DateTime.Now.AddMonths(-5).ToString("MMMM", thCulture);
+    var endSixMonthsAgo = DateTime.Now.ToString("MMMM yyyy", thCulture);
+    var sixMonthRange = $"{startSixMonthsAgo} ถึง {endSixMonthsAgo}";
+}
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SDHPH ระบบคลังยา</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* 1. สีพื้นหลังและข้อความ (Eye Strain Prevention) */
+            --bg-main: #F4F5F7; /* เทาอ่อน สำหรับพื้นหลังหลัก ลดแสงจ้า */
+            --bg-surface: #F8F9FA; /* ขาวหม่น (Off-white) สำหรับกล่องข้อมูล/Sidebar */
+            --text-main: #333333; /* เทาเข้ม (Charcoal) ลด Contrast 100% ให้อ่านสบายตา */
+            --text-muted: #6B7280; /* เทากลาง สำหรับข้อความรอง/ไอคอนเมนู */
+            --border-color: #E5E7EB; /* สีเส้นขอบอ่อนๆ ไม่แย่งสายตา */
+            /* 2. สี Action & Medical Status */
+            --primary-blue: #2563EB; /* น้ำเงินหลัก (สงบ น่าเชื่อถือ) */
+            --primary-blue-hover: #1D4ED8;
+            --primary-blue-light: #EFF6FF; /* ฟ้าพาสเทล สำหรับพื้นหลัง Active (Gestalt Grouping) */
+
+            --alert-red: #DC2626; /* แดง (วิกฤต/หยุด) */
+            --alert-red-light: #FEF2F2;
+            --warn-orange: #D97706; /* ส้ม (เตือน/ตรวจสอบ) */
+            --success-green: #059669; /* เขียว (ปลอดภัย/ผ่าน) */
+        }
+
+        body {
+            background-color: var(--bg-main);
+            font-family: 'Sarabun', sans-serif;
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        /* ===== SIDEBAR (โครงสร้างหลัก) ===== */
+        .sidebar {
+            width: 320px;
+            height: 100vh;
+            background: var(--bg-surface);
+            position: fixed;
+            border-right: 1px solid var(--border-color);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02); /* เงาฟุ้งบางๆ */
+        }
+
+        .sidebar-header-section {
+            flex-shrink: 0;
+            padding-top: 15px;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .sidebar-logo-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            background: var(--primary-blue-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            color: var(--primary-blue);
+        }
+
+            .sidebar-logo-icon i {
+                font-size: 30px;
+            }
+
+        .sidebar-header h4 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .sidebar-header small {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .role-section {
+            padding: 0 20px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            background: var(--bg-main);
+            color: var(--text-muted);
+            padding: 4px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+
+        /* ===== SIDEBAR MENU ===== */
+        .sidebar-menu-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+
+            .sidebar-menu-scroll::-webkit-scrollbar {
+                width: 5px;
+            }
+
+            .sidebar-menu-scroll::-webkit-scrollbar-thumb {
+                background-color: #D1D5DB;
+                border-radius: 10px;
+            }
+
+        .nav-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #9CA3AF; /* สีอ่อนลงเพื่อไม่ให้กวนสายตา */
+            text-transform: uppercase;
+            padding: 15px 24px 5px;
+            letter-spacing: 0.5px;
+            margin: 10px 10px 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            margin: 4px 16px 4px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text-main);
+            transition: all 0.2s ease-in-out;
+        }
+
+            .sidebar a i {
+                font-size: 18px;
+                color: var(--text-muted);
+                transition: color 0.2s;
+            }
+
+            .sidebar a:hover {
+                background: var(--bg-main);
+                color: var(--primary-blue);
+            }
+
+                .sidebar a:hover i {
+                    color: var(--primary-blue);
+                }
+
+        /* เมนูที่ถูกเลือก (ลดภาระสมองด้วยพื้นหลังพาสเทล) */
+        .sidebar .active-link {
+            background: var(--primary-blue-light) !important;
+            color: var(--primary-blue) !important;
+            font-weight: 600;
+        }
+
+            .sidebar .active-link i {
+                color: var(--primary-blue) !important;
+            }
+
+        /* ===== LOGOUT SECTION ===== */
+        .logout-section {
+            flex-shrink: 0;
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-surface);
+        }
+
+        .logout-link {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: transparent !important;
+            color: var(--text-muted) !important;
+            font-weight: 500 !important;
+            font-size: 14px !important;
+            padding: 10px 16px !important;
+            border-radius: 8px !important;
+            border: 1px solid var(--border-color) !important;
+            transition: all 0.2s ease-in-out !important;
+            margin: 0 !important;
+        }
+
+            /* แจ้งเตือนสีแดงเฉพาะเมื่อ Hover (ป้องกันจิ้มผิด) */
+            .logout-link:hover {
+                background: var(--alert-red-light) !important;
+                color: var(--alert-red) !important;
+                border-color: var(--alert-red-light) !important;
+            }
+
+        /* ===== CONTENT AREA ===== */
+        .content {
+            margin-left: 320px;
+            width: calc(100vw - 320px);
+            padding: 24px 32px;
+            min-height: 100vh;
+        }
+
+        /* ===== STICKY HEADER ===== */
+        .sticky-top-header {
+            position: sticky;
+            top: 15px;
+            z-index: 1020;
+            margin-bottom: 24px;
+        }
+
+        .custom-header-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); /* เงาฟุ้งนุ่มๆ */
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-profile-badge {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-icon-bg {
+            background-color: var(--bg-main);
+            color: var(--text-muted);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="d-flex">
+        <!-- ================= SIDEBAR ================= -->
+        <div class="sidebar">
+
+            <div class="sidebar-header-section">
+                <div class="sidebar-header">
+                    <div class="sidebar-logo-icon"><i class="bi bi-heart-pulse-fill"></i></div>
+                    <h4>SDHPH</h4>
+                    <small>DRUG INVENTORY PRO</small>
+                </div>
+
+                @if (!string.IsNullOrEmpty(role))
+                {
+                    <div class="role-section">
+                        <span class="role-badge"><i class="bi bi-person-badge"></i> @role</span>
+                    </div>
+                }
+            </div>
+
+            <div class="sidebar-menu-scroll">
+
+                <p class="nav-label"><i class="bi bi-grid-fill"></i> เมนูหลัก</p>
+                <a asp-controller="Dashboard" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" ? "active-link" : "")">
+                    <i class="bi bi-speedometer2"></i> หน้าแรก (Dashboard)
+                </a>
+
+                @if (role == "Admin")
+                {
+                    <p class="nav-label"><i class="bi bi-gear-fill"></i> จัดการระบบ</p>
+                    <a asp-controller="Users" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Users" ? "active-link" : "")">
+                        <i class="bi bi-people"></i> จัดการผู้ใช้
+                    </a>
+                    <a asp-controller="Departments" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Departments" ? "active-link" : "")">
+                        <i class="bi bi-hospital"></i> ข้อมูลแผนก
+                    </a>
+                }
+
+                @if (role == "Pharmacist")
+                {
+                    <p class="nav-label"><i class="bi bi-box-seam-fill"></i> บริหารคลังยา</p>
+                    <a asp-controller="Medicines" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Medicines" ? "active-link" : "")">
+                        <i class="bi bi-capsule"></i> ทะเบียนยาและเวชภัณฑ์
+                    </a>
+                    <a asp-controller="Receive" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Receive" ? "active-link" : "")">
+                        <i class="bi bi-box-arrow-in-down"></i> รับเข้าคลังยา
+                    </a>
+                    <a asp-controller="StockAlert" asp-action="index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrders" ? "active-link" : "")">
+                        <i class="bi bi-cart-check"></i> จัดการล็อตและวันหมดอายุ
+                    </a>
+
+                    <p class="nav-label"><i class="bi bi-clipboard2-pulse-fill"></i> การเบิกจ่าย</p>
+                    <a asp-controller="Dispense" asp-action="Create" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Create" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" ? "active-link" : "")">
+                        <i class="bi bi-clipboard-plus"></i> ขอเบิกยาและเวชภัณฑ์
+                    </a>
+                    <a asp-controller="Dispense" asp-action="Index" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" ? "active-link" : "")">
+                        <i class="bi bi-list-check"></i> สถานะคำขอเบิก
+                    </a>
+                    <a asp-controller="Dispense" asp-action="Approve" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Approve" ? "active-link" : "")">
+                        <i class="bi bi-shield-check"></i> อนุมัติการเบิกจ่าย
+                    </a>
+                }
+
+                @if (role == "Staff")
+                {
+                    <p class="nav-label"><i class="bi bi-clipboard2-pulse-fill"></i> การเบิกจ่าย</p>
+                    <a asp-controller="Dispense" asp-action="Create" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Create" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" ? "active-link" : "")">
+                        <i class="bi bi-clipboard-plus"></i> สร้างคำขอเบิกยา
+                    </a>
+                    <a asp-controller="Dispense" asp-action="Index" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" ? "active-link" : "")">
+                        <i class="bi bi-list-check"></i> ตรวจสอบสถานะคำขอ
+                    </a>
+                }
+            </div>
+
+            <div class="logout-section">
+                <a class="logout-link" asp-controller="Account" asp-action="Logout" onclick="return confirm('ยืนยันการออกจากระบบ?')">
+                    <i class="bi bi-power"></i> ออกจากระบบ
+                </a>
+            </div>
+
+        </div>
+
+        <!-- ================= CONTENT AREA ================= -->
+        <div class="content">
+            <div class="sticky-top-header">
+                <div class="custom-header-card">
+
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="background-color: var(--primary-blue-light); color: var(--primary-blue); padding: 8px 12px; border-radius: 8px;">
+                            <i class="@(ViewData["HeaderIcon"] ?? "bi bi-speedometer2") fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold" style="font-size: 18px;">@(ViewData["HeaderTitle"] ?? "ระบบจัดการคลังยาและเวชภัณฑ์")</h5>
+                            <span class="text-muted small fw-medium">รพ.สต.ท่าทองใหม่ | ข้อมูลสรุป ณ เดือน @currentMonthName</span>
+                        </div>
+                    </div>
+
+                    <div class="user-profile-badge">
+                        <div class="text-end" style="line-height: 1.2;">
+                            <span class="fw-bold" style="font-size: 14px; color: var(--text-main);">@fullName</span><br />
+                            <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">@(role ?? "Guest")</span>
+                        </div>
+                        <div class="user-icon-bg">
+                            <i class="bi bi-person-fill fs-5"></i>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            @RenderBody()
+
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

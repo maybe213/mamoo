@@ -1,0 +1,150 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|d:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\druginventorymanagement\\views\\dashboard\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|solutionrelative:views\\dashboard\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|d:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\druginventorymanagement\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|d:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\druginventorymanagement\\controllers\\accountcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|solutionrelative:controllers\\accountcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|d:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\druginventorymanagement\\views\\stockalert\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|solutionrelative:views\\stockalert\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|d:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\druginventorymanagement\\controllers\\stockalertcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|solutionrelative:controllers\\stockalertcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|d:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\druginventorymanagement\\views\\dispense\\create.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|solutionrelative:views\\dispense\\create.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|d:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\druginventorymanagement\\controllers\\dispensecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{11EC4E24-8AFD-4122-8D10-439F241580F1}|DrugInventoryPro.csproj|solutionrelative:controllers\\dispensecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 1,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedHeight": 191,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Index.cshtml",
+              "DocumentMoniker": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Views\\Dashboard\\Index.cshtml",
+              "RelativeDocumentMoniker": "Views\\Dashboard\\Index.cshtml",
+              "ToolTip": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Views\\Dashboard\\Index.cshtml",
+              "RelativeToolTip": "Views\\Dashboard\\Index.cshtml",
+              "ViewState": "AgIAAOUBAAAAAAAAAAAkwPIBAABPAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-08-27T03:44:25.717Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACgAAAAmAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-27T03:24:45.74Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "AccountController.cs",
+              "DocumentMoniker": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Controllers\\AccountController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AccountController.cs",
+              "ToolTip": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Controllers\\AccountController.cs",
+              "RelativeToolTip": "Controllers\\AccountController.cs",
+              "ViewState": "AgIAAA8AAAAAAAAAAAA5wDEAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-27T03:17:21.66Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "StockAlertController.cs",
+              "DocumentMoniker": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Controllers\\StockAlertController.cs",
+              "RelativeDocumentMoniker": "Controllers\\StockAlertController.cs",
+              "ToolTip": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Controllers\\StockAlertController.cs",
+              "RelativeToolTip": "Controllers\\StockAlertController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-26T07:04:59.026Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Index.cshtml",
+              "DocumentMoniker": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Views\\StockAlert\\Index.cshtml",
+              "RelativeDocumentMoniker": "Views\\StockAlert\\Index.cshtml",
+              "ToolTip": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Views\\StockAlert\\Index.cshtml",
+              "RelativeToolTip": "Views\\StockAlert\\Index.cshtml",
+              "ViewState": "AgIAACEBAAAAAAAAAAAYwDIBAAA1AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-08-26T07:04:27.189Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Create.cshtml",
+              "DocumentMoniker": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Views\\Dispense\\Create.cshtml",
+              "RelativeDocumentMoniker": "Views\\Dispense\\Create.cshtml",
+              "ToolTip": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Views\\Dispense\\Create.cshtml",
+              "RelativeToolTip": "Views\\Dispense\\Create.cshtml",
+              "ViewState": "AgIAAJkBAAAAAAAAAAAMwK4BAABMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-08-26T06:24:49.717Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "DispenseController.cs",
+              "DocumentMoniker": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Controllers\\DispenseController.cs",
+              "RelativeDocumentMoniker": "Controllers\\DispenseController.cs",
+              "ToolTip": "D:\\\u0E21\u0E2B\u0E32\u0E25\u0E31\u0E22\\\u0E27\u0E34\u0E08\u0E31\u0E22\\\u0E42\u0E1B\u0E23\u0E41\u0E01\u0E23\u0E21\\DrugInventoryManagement\\Controllers\\DispenseController.cs",
+              "RelativeToolTip": "Controllers\\DispenseController.cs",
+              "ViewState": "AgIAABYAAAAAAAAAAAAQwBgAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-08-26T05:56:03.857Z"
+            }
+          ]
+        },
+        {
+          "DockedHeight": 209,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

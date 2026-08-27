@@ -1,0 +1,446 @@
+﻿@model DrugInventoryPro.Models.Dispense
+
+@{
+    ViewData["Title"] = "รายละเอียดและพิมพ์ใบเบิกยา";
+    Layout = "_Layout";
+    var items = Model.DispenseDetails?.ToList() ?? new List<DrugInventoryPro.Models.DispenseDetail>();
+
+    // 🛠️ ฟังก์ชันอ่านชื่อยาอย่างปลอดภัย
+    string GetMedicineName(DrugInventoryPro.Models.DispenseDetail detail)
+    {
+        if (detail == null) return "-";
+
+        var med = detail.GetType().GetProperty("Medicine")?.GetValue(detail)
+               ?? detail.GetType().GetProperty("Medicines")?.GetValue(detail);
+
+        if (med == null) return detail.Medicine_id ?? "-";
+
+        var name = med.GetType().GetProperty("Medicine_name")?.GetValue(med)?.ToString()
+                ?? med.GetType().GetProperty("Name")?.GetValue(med)?.ToString();
+
+        return !string.IsNullOrEmpty(name) ? name : (detail.Medicine_id ?? "-");
+    }
+
+    // 🛠️ ฟังก์ชันอ่านราคาต่อหน่วยอย่างปลอดภัย
+    decimal GetUnitPrice(DrugInventoryPro.Models.DispenseDetail detail)
+    {
+        if (detail == null) return 0;
+
+        var med = detail.GetType().GetProperty("Medicine")?.GetValue(detail)
+               ?? detail.GetType().GetProperty("Medicines")?.GetValue(detail);
+
+        if (med == null) return 0;
+
+        var priceVal = med.GetType().GetProperty("Price")?.GetValue(med)
+                    ?? med.GetType().GetProperty("Unit_price")?.GetValue(med)
+                    ?? med.GetType().GetProperty("Medicine_price")?.GetValue(med);
+
+        if (priceVal != null && decimal.TryParse(priceVal.ToString(), out decimal price))
+        {
+            return price;
+        }
+        return 0;
+    }
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<style>
+    /* 🌟 ตัวแปรธีม Medical UI/UX */
+    :root {
+        --app-bg: #F4F5F7;
+        --card-bg: #FFFFFF;
+        --text-main: #333333;
+        --text-muted: #64748B;
+        --border-color: #E2E8F0;
+        --color-primary: #026AA7;
+        --color-primary-light: #F0F9FF;
+        --status-success-bg: #ECFDF5;
+        --status-success-text: #065F46;
+        --status-warning-bg: #FEF3C7;
+        --status-warning-text: #92400E;
+        --status-danger-bg: #FEF2F2;
+        --status-danger-text: #991B1B;
+    }
+
+    body {
+        background-color: var(--app-bg);
+        font-family: 'Sarabun', sans-serif;
+        color: var(--text-main);
+    }
+
+    /* Card Layout */
+    .card-detail {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        background-color: var(--card-bg);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        overflow: hidden;
+    }
+
+    .card-header-clean {
+        background-color: #F8F9FA;
+        border-bottom: 1px solid var(--border-color);
+        border-top: 4px solid var(--color-primary);
+        padding: 18px 24px;
+    }
+
+    /* Status Badges */
+    .status-badge {
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 6px 14px;
+        border-radius: 50px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-approved {
+        background-color: var(--status-success-bg);
+        color: var(--status-success-text);
+        border: 1px solid #A7F3D0;
+    }
+
+    .status-pending {
+        background-color: var(--status-warning-bg);
+        color: var(--status-warning-text);
+        border: 1px solid #FDE68A;
+    }
+
+    .status-rejected {
+        background-color: var(--status-danger-bg);
+        color: var(--status-danger-text);
+        border: 1px solid #FECACA;
+    }
+
+    /* Buttons */
+    .btn-back-outline {
+        color: var(--text-muted);
+        border: 1px solid #CBD5E1;
+        background-color: #FFFFFF;
+        padding: 8px 20px;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+        .btn-back-outline:hover {
+            background-color: #F1F5F9;
+            color: var(--text-main);
+        }
+
+    /* ซ่อนฟอร์มพิมพ์บนหน้าจอปกติ */
+    .print-only-container {
+        display: none;
+    }
+
+    /* CSS สำหรับการสั่งพิมพ์ (A4 Mode) */
+    @@media print {
+
+        @@page {
+            size: A4 portrait;
+            margin: 15mm;
+        }
+
+        html, body {
+            background-color: #FFFFFF !important;
+            font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
+            font-size: 14pt;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+        }
+            /* ซ่อนทุกอย่างในหน้าก่อน แล้วดึงเฉพาะกล่องเอกสารมาวางที่จุดเริ่มต้นของหน้ากระดาษ
+               วิธีนี้จะไม่ขึ้นกับ margin/padding ของ sidebar หรือ layout เดิมเลย จึงจัดกึ่งกลางได้แน่นอน */
+            body * {
+                visibility: hidden;
+            }
+
+        .print-only-container,
+        .print-only-container * {
+            visibility: visible;
+        }
+
+        .print-only-container {
+            display: block !important;
+            position: absolute !important;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            box-sizing: border-box;
+        }
+
+        .doc-header-table,
+        .table-print,
+        .doc-signature-table {
+            width: 100% !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+
+        .table-print {
+            border-collapse: collapse;
+            margin-top: 16px;
+            margin-bottom: 20px;
+            font-size: 13pt;
+        }
+
+            .table-print th, .table-print td {
+                border: 1px solid #333 !important;
+                padding: 8px 10px;
+                text-align: center !important;
+                vertical-align: middle !important;
+            }
+
+            .table-print th {
+                background-color: #f2f2f2 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-weight: bold;
+            }
+
+            .table-print tfoot td {
+                border: 1px solid #333 !important;
+                font-weight: bold;
+                padding: 8px 10px;
+            }
+
+        .doc-header-table td {
+            border: none;
+            padding: 3px 0;
+        }
+    }
+</style>
+
+
+<!-- ==========================================
+     1. หน้าจอแสดงผลปกติ (Web Dashboard UI)
+     ========================================== -->
+<div class="container mt-4 mb-5 main-ui-container">
+    <div class="card card-detail">
+        <!-- Card Header -->
+        <div class="card-header-clean d-flex justify-content-between align-items-center">
+            <h4 class="mb-0 fw-bold text-primary">
+                <i class="bi bi-file-earmark-text me-2"></i>รายละเอียดใบเบิกจ่ายยา เลขที่: @Model.Dispense_id
+            </h4>
+        </div>
+
+        <!-- Card Body -->
+        <div class="card-body p-4">
+            <!-- Summary Info Grid -->
+            <div class="row mb-4 g-3 bg-light p-3 rounded-3 border">
+                <div class="col-md-6">
+                    <p class="mb-2"><strong class="text-secondary"><i class="bi bi-calendar3 me-1"></i> วันที่ทำรายการ:</strong> @(Model.Dispense_date?.ToString("dd/MM/yyyy HH:mm") ?? "-")</p>
+                    <p class="mb-0"><strong class="text-secondary"><i class="bi bi-building me-1"></i> แผนกที่เบิก:</strong> <span class="badge bg-secondary px-2 py-1">@(Model.Departments?.Department_name ?? Model.Department_id ?? "-")</span></p>
+                </div>
+                <div class="col-md-6 d-flex align-items-center justify-content-md-end mt-3 mt-md-0">
+                    <div>
+                        <strong class="text-secondary me-2">สถานะใบเบิก:</strong>
+                        @if (Model.Status == "Approved")
+                        {
+                            <span class="status-badge status-approved">
+                                <i class="bi bi-check-circle-fill"></i> อนุมัติและตัดสต็อกแล้ว
+                            </span>
+                        }
+                        else if (Model.Status == "Pending" || string.IsNullOrEmpty(Model.Status))
+                        {
+                            <span class="status-badge status-pending">
+                                <i class="bi bi-hourglass-split"></i> รอการพิจารณาอนุมัติ
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="status-badge status-rejected">
+                                <i class="bi bi-x-circle-fill"></i> ปฏิเสธคำขอเบิก
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- List Section Header -->
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-list-ul me-2 text-primary"></i>รายการยาแนบท้ายใบเบิก
+                </h5>
+                <span class="badge bg-light text-dark border px-3 py-2 fw-normal">
+                    ทั้งหมด @items.Count รายการ
+                </span>
+            </div>
+
+            <!-- Table Web UI -->
+            <div class="table-responsive shadow-sm border rounded-3 mb-2">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-3 ps-4" style="width: 80px;">ลำดับ</th>
+                            <th class="py-3">ชื่อยา / รหัสยา</th>
+                            <th class="text-center py-3" style="width: 180px;">จำนวนเงิน (บาท)</th>
+                            <th class="text-end py-3 pe-4" style="width: 180px;">จำนวนที่ขอเบิก</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (items.Count > 0)
+                        {
+                            decimal grandTotal = 0;
+                            for (int i = 0; i < items.Count; i++)
+                            {
+                                var item = items[i];
+                                string medName = GetMedicineName(item);
+                                decimal unitPrice = GetUnitPrice(item);
+                                decimal totalPrice = (item.Quantity_dispensed ?? 0) * unitPrice;
+                                grandTotal += totalPrice;
+
+                                <tr>
+                                    <td class="ps-4 text-secondary fw-bold">@(i + 1)</td>
+                                    <td class="py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="p-2 bg-light border rounded-circle me-3 text-primary d-none d-sm-block">
+                                                <i class="bi bi-capsule fs-5"></i>
+                                            </div>
+                                            <div>
+                                                <span class="fw-bold text-dark d-block">@medName</span>
+                                                <small class="text-muted">รหัสยา: @(item.Medicine_id ?? "-")</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center fw-semibold text-dark">
+                                        @totalPrice.ToString("N2") ฿
+                                    </td>
+                                    <td class="text-end pe-4 py-3">
+                                        <span class="badge bg-light text-primary border px-3 py-2 fw-bold fs-6">
+                                            @(item.Quantity_dispensed ?? 0)
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="bi bi-exclamation-circle d-block mb-2 fs-2"></i>
+                                    ไม่พบรายการยาแนบท้ายใบเบิกฉบับนี้
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Card Footer -->
+        <div class="card-footer bg-light p-3 d-flex justify-content-between align-items-center border-top">
+            <a asp-action="Index" class="btn-back-outline shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i> กลับหน้าทะเบียนประวัติ
+            </a>
+            <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm" onclick="window.print()">
+                <i class="bi bi-printer me-2"></i>พิมพ์ใบเบิกยา (A4)
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     2. เอกสารสำหรับสั่งพิมพ์ A4 (Print UI)
+     ========================================== -->
+<div class="print-only-container">
+
+    @{
+        decimal grandTotalPrint = items.Sum(it => (it.Quantity_dispensed ?? 0) * GetUnitPrice(it));
+    }
+
+    <!-- หัวเอกสาร -->
+    <div style="text-align: center; margin-bottom: 4px;">
+        <h3 style="font-weight: bold; margin: 0 0 4px 0; font-size: 20pt;">ใบเบิก/จ่ายยาและเวชภัณฑ์</h3>
+        <h5 style="margin: 0; font-weight: normal; font-size: 15pt;">สถานบริการ PCC ท่าทองใหม่ อ.กาญจนดิษฐ์ จ.สุราษฎร์ธานี</h5>
+    </div>
+
+    <hr style="border: none; border-top: 1.5px solid #333; margin: 12px 0 16px 0;" />
+
+    <!-- รายละเอียดส่วนหัว -->
+    <table class="doc-header-table" style="width: 100%; margin-bottom: 8px; border-collapse: collapse; font-size: 14pt;">
+        <tr>
+            <td style="width: 50%; padding: 4px 0; text-align: left;"><strong>เลขที่ใบจ่าย:</strong> @Model.Dispense_id</td>
+            <td style="width: 50%; padding: 4px 0; text-align: right;"><strong>วันที่:</strong> @(Model.Dispense_date?.ToString("dd MMM yyyy") ?? "-")</td>
+        </tr>
+        <tr>
+            <td style="width: 50%; padding: 4px 0; text-align: left;"><strong>แผนกที่เบิก:</strong> @(Model.Departments?.Department_name ?? Model.Department_id ?? "-")</td>
+            <td style="width: 50%; padding: 4px 0; text-align: right;"><strong>สถานะ:</strong> @(Model.Status ?? "Pending")</td>
+        </tr>
+    </table>
+
+    <!-- ตารางรายการยาสำหรับการพิมพ์ -->
+    <table class="table-print">
+        <thead>
+            <tr>
+                <th style="width: 8%;">ลำดับ</th>
+                <th style="width: 47%;">ชื่อยา-เวชภัณฑ์</th>
+                <th style="width: 22%;">จำนวนเงิน (บาท)</th>
+                <th style="width: 23%;">จำนวนที่จ่าย</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (items.Count > 0)
+            {
+                for (int i = 0; i < items.Count; i++)
+                {
+                    var item = items[i];
+                    string medName = GetMedicineName(item);
+                    decimal unitPrice = GetUnitPrice(item);
+                    decimal totalPrice = (item.Quantity_dispensed ?? 0) * unitPrice;
+
+                    <tr>
+                        <td>@(i + 1)</td>
+                        <td style="text-align: left; padding-left: 10px;">@medName</td>
+                        <td style="text-align: right; padding-right: 10px;">@totalPrice.ToString("N2")</td>
+                        <td>@(item.Quantity_dispensed ?? 0)</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="4">ไม่พบรายการยา</td>
+                </tr>
+            }
+        </tbody>
+        @if (items.Count > 0)
+        {
+            <tfoot>
+                <tr>
+                    <td colspan="2" style="text-align: right; padding-right: 10px;">รวมเป็นเงินทั้งสิ้น</td>
+                    <td style="text-align: right; padding-right: 10px;">@grandTotalPrint.ToString("N2")</td>
+                    <td>บาท</td>
+                </tr>
+            </tfoot>
+        }
+    </table>
+
+    <!-- ลายเซ็นต์ท้ายเอกสาร -->
+    <table class="doc-signature-table" style="width: 100%; border: none; margin-top: 50px;">
+        <tr style="border: none;">
+            <td style="width: 50%; text-align: center; border: none; vertical-align: top; padding: 0 10px;">
+                <p style="margin-bottom: 16px;">ลงชื่อ..................................................</p>
+                <p style="margin-bottom: 16px;">ผู้ขอเบิก/รับยา</p>
+                <p style="margin-bottom: 16px;">(..................................................)</p>
+                <p style="margin: 0;">วันที่............/............/............</p>
+            </td>
+            <td style="width: 50%; text-align: center; border: none; vertical-align: top; padding: 0 10px;">
+                <p style="margin-bottom: 16px;">ลงชื่อ..................................................</p>
+                <p style="margin-bottom: 16px;">ผู้จ่ายยา</p>
+                <p style="margin-bottom: 16px;">(..................................................)</p>
+                <p style="margin: 0;">วันที่............/............/............</p>
+            </td>
+        </tr>
+    </table>
+</div>

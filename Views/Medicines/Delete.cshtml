@@ -1,0 +1,238 @@
+﻿@model DrugInventoryPro.Models.Medicines
+
+@{
+    ViewData["Title"] = "ยืนยันการลบยา";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@{
+    bool hasHistory = ViewBag.HasDispenseHistory ?? false;
+    int currentStock = Model?.Stock ?? 0;
+
+    // ถ้ายาตัวนี้มีสต็อกเหลืออยู่ หรือ เคยทำรายการจ่ายยาไปแล้ว => ให้เลือก "ปิดใช้งาน"
+    bool isSoftDeleteMode = (currentStock > 0 || hasHistory);
+}
+
+<style>
+    /* กฎข้อ 1: ใช้สีพื้นหลังและตัวอักษรที่ลดความล้าของสายตา (Eye Strain Prevention) */
+    :root {
+        --app-bg: #F4F5F7; /* เทาอ่อน ลด Glare */
+        --card-bg: #F8F9FA; /* ขาวหม่น Off-white */
+        --text-main: #333333; /* เทาเข้ม Charcoal เลี่ยงสีดำสนิท */
+        --text-muted: #5A6268;
+        --color-primary: #026AA7; /* น้ำเงิน/ฟ้า สำหรับข้อมูลหลัก ดูสงบ */
+        /* กฎข้อ 2 & 3: สีแจ้งเตือนโทน Pastel และสีสำหรับการจัดหมวดหมู่ */
+        --alert-warning-bg: #FFFBEB;
+        --alert-warning-border: #F59E0B;
+        --alert-warning-text: #92400E;
+        --alert-critical-bg: #FEF2F2;
+        --alert-critical-border: #EF4444;
+        --alert-critical-text: #991B1B;
+    }
+
+    body {
+        background-color: var(--app-bg);
+        color: var(--text-main);
+        font-family: 'Sarabun', sans-serif;
+    }
+
+    .delete-container {
+        max-width: 650px;
+        margin: 60px auto;
+    }
+
+    .card-clean {
+        background-color: var(--card-bg);
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    /* กล่องแจ้งเตือน - กฎข้อ 4: ใช้ข้อความตัวหนาและไอคอนกำกับเสมอ */
+    .alert-box {
+        padding: 20px;
+        border-left: 6px solid;
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .alert-warning {
+        background-color: var(--alert-warning-bg);
+        border-color: var(--alert-warning-border);
+        color: var(--alert-warning-text);
+    }
+
+    .alert-critical {
+        background-color: var(--alert-critical-bg);
+        border-color: var(--alert-critical-border);
+        color: var(--alert-critical-text);
+    }
+
+    .alert-icon {
+        font-size: 1.8rem;
+        line-height: 1;
+    }
+
+    /* การจัดกลุ่มข้อมูลตาม Law of Similarity */
+    .info-container {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 8px;
+        padding: 10px 20px;
+    }
+
+    .info-row {
+        display: flex;
+        padding: 12px 0;
+        border-bottom: 1px solid #F1F5F9;
+    }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+    .info-label {
+        width: 35%;
+        color: var(--text-muted);
+        font-weight: 500;
+        font-size: 0.95rem;
+    }
+
+    .info-value {
+        width: 65%;
+        color: var(--text-main);
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    /* ปุ่ม Action ตามหลักจิตวิทยาสี */
+    .btn-action {
+        padding: 10px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-cancel {
+        background-color: #E2E8F0;
+        color: var(--text-main);
+        text-decoration: none;
+    }
+
+        .btn-cancel:hover {
+            background-color: #CBD5E1;
+        }
+
+    .btn-warning-action {
+        background-color: var(--alert-warning-border);
+        color: #FFFFFF;
+    }
+
+        .btn-warning-action:hover {
+            background-color: #D97706;
+        }
+
+    .btn-critical-action {
+        background-color: var(--alert-critical-border);
+        color: #FFFFFF;
+    }
+
+        .btn-critical-action:hover {
+            background-color: #DC2626;
+        }
+</style>
+
+<div class="delete-container">
+    <div class="card-clean p-4">
+
+        <!-- กฎข้อ 4: ห้ามใช้สีอย่างเดียว ต้องมีไอคอน (⚠️ หรือ ❌) และข้อความตัวหนากำกับ -->
+        @if (isSoftDeleteMode)
+        {
+            <div class="alert-box alert-warning rounded">
+                <div class="alert-icon">⚠️</div>
+                <div>
+                    <h5 class="fw-bold mb-1">คำเตือน: ต้องการปิดใช้งานเวชภัณฑ์?</h5>
+                    <p class="mb-0 fs-6">เนื่องจากยามีสต็อกคงเหลือหรือเคยมีประวัติการจ่ายยา ระบบจะทำการระงับการใช้งานแทนการลบถาวร</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert-box alert-critical rounded">
+                <div class="alert-icon">❌</div>
+                <div>
+                    <h5 class="fw-bold mb-1">วิกฤต: ยืนยันการลบข้อมูลถาวร?</h5>
+                    <p class="mb-0 fs-6">รายการนี้เป็นรายการเพิ่มผิด <strong>เมื่อลบแล้วจะไม่สามารถกู้คืนข้อมูลได้</strong></p>
+                </div>
+            </div>
+        }
+
+        <!-- กฎข้อ 3: จัดหมวดหมู่ข้อมูลด้วยพื้นหลังที่สบายตา แยกส่วนออกจากคำเตือนชัดเจน -->
+        <div class="info-container mt-4 mb-4">
+            <div class="info-row">
+                <div class="info-label">ชื่อยา / เวชภัณฑ์</div>
+                <div class="info-value" style="color: var(--color-primary); font-size: 1.1rem;">
+                    @Model?.Medicine_name
+                </div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">รหัสยา (Item ID)</div>
+                <div class="info-value font-monospace">@Model?.Medicine_id</div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">หมวดหมู่</div>
+                <div class="info-value">@(Model?.Category?.Category_name ?? Model?.Category_id)</div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">หน่วย / ราคาทุน</div>
+                <div class="info-value">@Model?.Unit_id | @(Model?.Price.ToString("N2") ?? "0.00") บาท</div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-label">คงเหลือในคลัง</div>
+                <div class="info-value">
+                    @(Model?.Stock?.ToString("N0") ?? "0") @Model?.Unit_id
+                </div>
+            </div>
+        </div>
+
+        <!-- โซนปุ่มกดยืนยัน -->
+        <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+            <a asp-action="Index" class="btn-action btn-cancel">
+                <i class="bi bi-arrow-left"></i> กลับหน้ารายการ
+            </a>
+
+            <form asp-action="Delete" asp-route-id="@Model.Medicine_id" method="post"
+                  onsubmit="return confirm('@(isSoftDeleteMode ? "ยืนยันการปิดใช้งานยารายการนี้ (รหัส: " + Model.Medicine_id + ") ใช่หรือไม่?" : "ยืนยันการลบรายการยานี้ออกจากฐานข้อมูลถาวรใช่หรือไม่?")');">
+                @Html.AntiForgeryToken()
+
+                @if (isSoftDeleteMode)
+                {
+                    <button type="submit" class="btn-action btn-warning-action shadow-sm">
+                        <i class="bi bi-eye-slash-fill"></i> ยืนยันปิดใช้งาน
+                    </button>
+                }
+                else
+                {
+                    <button type="submit" class="btn-action btn-critical-action shadow-sm">
+                        <i class="bi bi-trash3-fill"></i> ยืนยันลบถาวร
+                    </button>
+                }
+            </form>
+        </div>
+
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">

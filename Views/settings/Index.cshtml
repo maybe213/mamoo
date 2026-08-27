@@ -1,0 +1,421 @@
+@model IEnumerable<DrugInventoryPro.Models.MedicineUnit>
+@* Views/Settings/Index.cshtml *@
+@{
+    ViewData["Title"] = "ตั้งค่าข้อมูลหลัก";
+    var categories = ViewBag.Categories as List<DrugInventoryPro.Models.Category>
+                    ?? new List<DrugInventoryPro.Models.Category>();
+
+    // ✅ ดึงข้อมูลวัตถุโดยตรงจาก Model หลักที่ส่งมาจาก SettingsController
+    var Unit_ids = Model?.ToList() ?? new List<DrugInventoryPro.Models.MedicineUnit>();
+}
+
+<style>
+    /* 🌟 ตัวแปรธีม Medical UI/UX (Clean & Muted) */
+    :root {
+        --app-bg: #F4F5F7;
+        --card-bg: #FFFFFF;
+        --text-main: #1E293B;
+        --text-muted: #64748B;
+        --border-color: #E2E8F0;
+        --color-primary: #026AA7;
+        --color-primary-hover: #025383;
+        --color-primary-light: #F0F9FF;
+        --color-success: #059669;
+        --color-danger: #EF4444;
+        --color-danger-hover: #DC2626;
+    }
+
+    body {
+        background-color: var(--app-bg);
+        font-family: 'Sarabun', sans-serif;
+        color: var(--text-main);
+    }
+
+    /* Outer Settings Card */
+    .settings-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 24px;
+        height: 100%;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    .sec-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--color-primary);
+        border-bottom: 2px solid var(--color-primary-light);
+        padding-bottom: 8px;
+        margin-bottom: 20px;
+    }
+
+    /* Form Inputs */
+    .form-control, .form-select {
+        border: 1px solid #CBD5E1;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        transition: all 0.2s ease-in-out;
+    }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(2, 106, 167, 0.15);
+            outline: none;
+        }
+
+    /* Action Buttons */
+    .btn-add {
+        background: var(--color-primary);
+        color: #FFFFFF;
+        border: none;
+        border-radius: 8px;
+        padding: 9px 16px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s ease-in-out;
+    }
+
+        .btn-add:hover {
+            background: var(--color-primary-hover);
+            color: #FFFFFF;
+            box-shadow: 0 2px 8px rgba(2, 106, 167, 0.25);
+        }
+
+    .btn-del {
+        background: transparent;
+        border: 1px solid #FCA5A5;
+        color: var(--color-danger);
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+    }
+
+        .btn-del:hover {
+            background: var(--color-danger);
+            color: #FFFFFF;
+            border-color: var(--color-danger);
+        }
+
+    /* Lists & Items */
+    .list-box {
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        overflow: hidden;
+        max-height: 420px;
+        overflow-y: auto;
+        background-color: #FFFFFF;
+    }
+
+    .item-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 14px;
+        border-bottom: 1px solid #F1F5F9;
+        transition: background .15s ease-in-out;
+    }
+
+        .item-row:hover {
+            background: #F8FAFC;
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+        }
+
+    /* Badges */
+    .cat-id {
+        font-family: monospace;
+        font-size: 0.75rem;
+        background: #E0F2FE;
+        color: #0369A1;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 20px;
+        margin-right: 8px;
+    }
+
+    .cat-disease {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        display: block;
+        margin-top: 2px;
+    }
+
+    .badge-Unit_id {
+        background: #ECFDF5;
+        color: #047857;
+        border: 1px solid #A7F3D0;
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+
+    .group-header {
+        background: #F8FAFC;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--border-color);
+        border-top: 1px solid var(--border-color);
+    }
+
+        .group-header:first-child {
+            border-top: none;
+        }
+
+    /* Stat Box */
+    .stat-card-box {
+        background: #F8FAFC;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 14px;
+    }
+</style>
+
+<div class="container-fluid py-4 px-md-4">
+
+    @* ── Alert Notifications ── *@
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success border-0 shadow-sm rounded-3 mb-4 d-flex align-items-center gap-2" style="background-color: #ECFDF5; color: #047857;">
+            <i class="bi bi-check-circle-fill fs-5"></i>
+            <div>@TempData["Success"]</div>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-4 d-flex align-items-center gap-2" style="background-color: #FEF2F2; color: #991B1B;">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div>@TempData["Error"]</div>
+        </div>
+    }
+
+    <!-- Header Bar -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold text-dark mb-1">
+                <i class="bi bi-gear-fill me-2" style="color: var(--color-primary);"></i>ตั้งค่าข้อมูลหลัก
+            </h4>
+            <span class="text-muted small">จัดการข้อมูลหมวดหมู่ยา เวชภัณฑ์ และหน่วยนับกลางของระบบคลัง</span>
+        </div>
+        <a asp-controller="Medicines" asp-action="Index" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i> กลับหน้าคลังยา
+        </a>
+    </div>
+
+    <div class="row g-4">
+
+        @* ── คอลัมน์ 1: จัดการหมวดหมู่ ── *@
+        <div class="col-lg-6">
+            <div class="settings-card">
+                <div class="sec-title"><i class="bi bi-tags-fill me-2"></i>จัดการหมวดหมู่ยาและเวชภัณฑ์</div>
+
+                <form asp-action="AddCategory" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-dark mb-1" style="font-size: 0.85rem;">
+                                ชื่อหมวดหมู่ <span class="text-danger">*</span>
+                            </label>
+                            <input name="Name" class="form-control" placeholder="เช่น ยาปฏิชีวนะ, ยาลดไข้..." required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark mb-1" style="font-size: 0.85rem;">โรคที่เกี่ยวข้อง</label>
+                            <input name="RelatedDisease" class="form-control" placeholder="เช่น ไข้หวัด, เบาหวาน..." />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark mb-1" style="font-size: 0.85rem;">หมายเหตุ</label>
+                            <input name="Description" class="form-control" placeholder="รายละเอียดเพิ่มเติม..." />
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-add w-100 py-2 shadow-sm">
+                        <i class="bi bi-plus-lg me-1"></i> เพิ่มหมวดหมู่
+                    </button>
+                </form>
+
+                <div class="mt-4 mb-2 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-secondary small">รายการหมวดหมู่ทั้งหมด</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">@categories.Count รายการ</span>
+                </div>
+
+                <div class="list-box">
+                    @if (categories.Count == 0)
+                    {
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i>
+                            <span>ยังไม่มีข้อมูลหมวดหมู่ในระบบ</span>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var cat in categories)
+                        {
+                            <div class="item-row">
+                                <div>
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="cat-id">@cat.Category_id</span>
+                                        <span class="fw-bold text-dark">@cat.Category_name</span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(cat.Related_disease))
+                                    {
+                                        <span class="cat-disease">
+                                            <i class="bi bi-heart-pulse me-1 text-primary"></i>@cat.Related_disease
+                                        </span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(cat.Description))
+                                    {
+                                        <span class="cat-disease text-muted">@cat.Description</span>
+                                    }
+                                </div>
+                                <a asp-action="DeleteCategory" asp-route-id="@cat.Category_id"
+                                   class="btn-del"
+                                   onclick="return confirm('ลบหมวดหมู่ @cat.Category_name ?')">
+                                    <i class="bi bi-trash me-1"></i>ลบ
+                                </a>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        @* ── คอลัมน์ 2: จัดการหน่วยนับ ── *@
+        <div class="col-lg-6">
+            <div class="settings-card">
+                <div class="sec-title"><i class="bi bi-box-seam me-2"></i>จัดการหน่วยนับในระบบ</div>
+
+                <form asp-action="AddUnit_id" method="post" class="mb-3">
+                    @Html.AntiForgeryToken()
+
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark mb-1" style="font-size: 0.85rem;">
+                                ชื่อหน่วยนับ <span class="text-danger">*</span>
+                            </label>
+                            <input name="Unit_idName"
+                                   class="form-control"
+                                   placeholder="เช่น เม็ด, แผง, ขวด"
+                                   required />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark mb-1" style="font-size: 0.85rem;">
+                                กลุ่มหน่วยนับ <span class="text-danger">*</span>
+                            </label>
+
+                            <select name="GroupName"
+                                    class="form-select"
+                                    required>
+                                <option value="">-- เลือกกลุ่มทางการแพทย์ --</option>
+                                <option value="1. กลุ่มหน่วยนับประเภท ยาเม็ด / แคปซูล / แผง">
+                                    1. กลุ่ม ยาเม็ด / แคปซูล / แผง
+                                </option>
+                                <option value="2. กลุ่มหน่วยนับประเภท ยาน้ำ / ยาทา / ยาดม">
+                                    2. กลุ่ม ยาน้ำ / ยาทา / ยาดม
+                                </option>
+                                <option value="3. กลุ่มหน่วยนับประเภท ยาฉีด (Injections)">
+                                    3. กลุ่ม ยาฉีด (Injections)
+                                </option>
+                                <option value="4. กลุ่มหน่วยนับประเภท เวชภัณฑ์มิใช่ยา (Supplies)">
+                                    4. กลุ่ม เวชภัณฑ์มิใช่ยา (Supplies)
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold text-dark mb-1" style="font-size: 0.85rem;">
+                                รายละเอียด (ถ้ามี)
+                            </label>
+                            <textarea name="Description"
+                                      class="form-control"
+                                      rows="2"
+                                      placeholder="เช่น ใช้สำหรับยาชนิดเม็ด"></textarea>
+                        </div>
+
+                        <div class="col-12 mt-2">
+                            <button type="submit" class="btn-add w-100 py-2 shadow-sm">
+                                <i class="bi bi-plus-lg me-1"></i> เพิ่มหน่วยนับเข้าคลังหลัก
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="mt-4 mb-2 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-secondary small">รายการหน่วยนับในระบบ</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">@Unit_ids.Count รายการ</span>
+                </div>
+
+                <div class="list-box">
+                    @if (Unit_ids.Count == 0)
+                    {
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-inbox fs-3 d-block mb-2 text-secondary"></i>
+                            <span>ยังไม่มีข้อมูลหน่วยนับในฐานข้อมูล</span>
+                        </div>
+                    }
+                    else
+                    {
+                        @* Group ข้อมูล dynamically จาก Field Group_name *@
+                        var dynamicGroups = Unit_ids.GroupBy(u => u.Group_name).OrderBy(g => g.Key);
+
+                        @foreach (var group in dynamicGroups)
+                        {
+                            <div class="group-header">
+                                <i class="bi bi-folder2-open me-1 text-primary"></i> @(string.IsNullOrWhiteSpace(group.Key) ? "ไม่ระบุกลุ่ม" : group.Key)
+                            </div>
+
+                            @foreach (var u in group)
+                            {
+                                <div class="item-row ps-4">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge-Unit_id">@u.Status</span>
+                                        <span class="fw-bold text-dark">@u.Unit_name</span>
+                                    </div>
+                                    <a asp-action="DeleteUnit_id" asp-route-id="@u.Unit_id"
+                                       class="btn-del"
+                                       onclick="return confirm('คุณต้องการลบหน่วยนับ @u.Unit_name ใช่หรือไม่?')">
+                                        <i class="bi bi-trash me-1"></i>ลบ
+                                    </a>
+                                </div>
+                            }
+                        }
+                    }
+                </div>
+
+                @* สรุปข้อมูลหมวดหมู่ & หน่วยนับ *@
+                <div class="sec-title mt-4"><i class="bi bi-bar-chart-fill me-2"></i>สรุปข้อมูลระบบ</div>
+                <div class="row g-2 text-center">
+                    <div class="col-6">
+                        <div class="stat-card-box">
+                            <div class="fw-bold fs-4 text-primary font-monospace">@categories.Count</div>
+                            <div class="text-muted small">หมวดหมู่ทั้งหมด</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card-box">
+                            <div class="fw-bold fs-4 text-dark font-monospace">@Unit_ids.Count</div>
+                            <div class="text-muted small">หน่วยนับที่บันทึกไว้</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+}

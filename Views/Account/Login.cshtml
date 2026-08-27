@@ -1,0 +1,419 @@
+﻿@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - SDHPH</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* ปรับโทนสีตามหลัก Visual Ergonomics สำหรับการแพทย์ */
+            --primary-deep: #1E3A8A; /* น้ำเงินเข้ม: ดูน่าเชื่อถือ ใช้สำหรับปุ่มและข้อความสำคัญ */
+            --primary-mid: #2563EB; /* น้ำเงินสว่าง: ใช้สำหรับการ Focus เพื่อบอกสถานะ */
+            --bg-light: #F3F4F6; /* เทาอ่อน: พื้นหลังหลัก ลดแสงสะท้อนเข้าตา (Glare) */
+            --bg-soft: #E5E7EB; /* เทาอมฟ้า: พื้นหลังรอง สบายตา */
+            --text-dark: #374151; /* เทาเข้ม: ใช้แทนดำสนิท เพื่อลด Eye Strain เวลาอ่านยาวๆ */
+            --muted: #6B7280; /* เทากลาง: สำหรับข้อความรอง */
+            --border: #D1D5DB; /* เทาอ่อน: เส้นขอบที่ไม่รบกวนสายตา */
+            --white: #ffffff;
+            /* สีสำหรับ Alert ข้อมูลวิกฤต/ผิดพลาด */
+            --alert-red: #DC2626;
+            --alert-bg: #FEF2F2;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background: var(--bg-light); /* ใช้เทาอ่อนแทนขาวสนิท */
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            width: 920px;
+            height: 560px;
+            background: var(--white);
+            border-radius: 24px;
+            display: flex;
+            overflow: hidden;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1); /* ลดเงาให้ดูนุ่มนวลขึ้น */
+            border: 1px solid var(--border); /* ใช้เส้นขอบบางๆ ไม่แย่งซีนสายตา */
+        }
+
+        /* ฝั่งซ้าย */
+        .welcome-side {
+            flex: 1.15;
+            padding: 60px 56px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--white);
+        }
+
+        .hospital-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-light);
+            border-radius: 100px;
+            padding: 6px 16px 6px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--primary-deep);
+            margin-bottom: 28px;
+            width: fit-content;
+            border: 1px solid var(--border);
+        }
+
+        .badge-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--bg-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .badge-dot svg {
+                width: 11px;
+                height: 11px;
+                stroke: var(--primary-deep);
+                fill: none;
+                stroke-width: 2;
+            }
+
+        .welcome-side h1 {
+            font-size: 38px;
+            color: var(--text-dark); /* ใช้เทาเข้มแทนดำ */
+            line-height: 1.25;
+            margin-bottom: 14px;
+        }
+
+            .welcome-side h1 span {
+                color: var(--primary-deep); /* เน้นคำด้วยสีหลักที่ดูสงบ */
+            }
+
+        .welcome-side .desc {
+            font-size: 14.5px;
+            color: var(--muted);
+            line-height: 1.8;
+            margin-bottom: 36px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13.5px;
+            color: var(--muted);
+            margin-bottom: 11px;
+        }
+
+        .feature-chip {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .feature-chip svg {
+                width: 13px;
+                height: 13px;
+                stroke: var(--primary-deep);
+                fill: none;
+                stroke-width: 2;
+            }
+
+        /* ฝั่งขวา */
+        .form-side {
+            flex: 1;
+            background: var(--bg-light); /* แบ่งโซนด้วยพื้นหลังสีต่างกันเล็กน้อย (Gestalt) */
+            padding: 30px 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .form-box {
+            background: var(--white);
+            border-radius: 24px;
+            padding: 32px 36px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); /* ยกให้โดดเด่นจากพื้นหลังรองนิดหน่อย */
+        }
+
+        .form-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-logo-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--bg-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+        }
+
+            .form-logo-icon svg {
+                width: 17px;
+                height: 17px;
+                stroke: var(--primary-deep);
+                fill: none;
+                stroke-width: 2;
+            }
+
+        .form-logo-text {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .form-logo-sub {
+            font-size: 10.5px;
+            color: var(--muted);
+        }
+
+        .form-box h2 {
+            font-size: 20px;
+            color: var(--text-dark);
+            margin-bottom: 3px;
+        }
+
+        .form-box .sub {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 16px;
+        }
+
+        /* 🟢 กล่องแจ้งเตือน (ปรับปรุงตามหลัก Accessibility) */
+        .error-alert {
+            background: var(--alert-bg);
+            border: 1px solid var(--alert-red);
+            color: var(--alert-red);
+            font-size: 13px;
+            padding: 10px 14px;
+            border-radius: 11px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px; /* จัดวางไอคอนและข้อความใกล้กัน (Proximity) */
+            line-height: 1.4;
+        }
+
+            .error-alert svg {
+                width: 18px;
+                height: 18px;
+                stroke: var(--alert-red);
+                fill: none;
+                stroke-width: 2;
+                flex-shrink: 0;
+            }
+
+        .field-group {
+            margin-bottom: 14px;
+        }
+
+            .field-group label {
+                display: block;
+                font-size: 12.5px;
+                font-weight: 600;
+                color: var(--text-dark);
+                margin-bottom: 6px;
+            }
+
+        .field-wrap {
+            position: relative;
+        }
+
+        .field-icon {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+            .field-icon svg {
+                width: 15px;
+                height: 15px;
+                stroke: var(--muted);
+                fill: none;
+                stroke-width: 2;
+            }
+
+        .field-wrap input {
+            width: 100%;
+            border: 1.5px solid var(--border);
+            border-radius: 11px;
+            padding: 12px 14px 12px 40px;
+            font-family: inherit;
+            font-size: 14.5px;
+            color: var(--text-dark);
+            outline: none;
+            transition: 0.2s;
+        }
+
+            .field-wrap input:focus {
+                border-color: var(--primary-mid);
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); /* แสงขอบเบาๆ เมื่อ Focus */
+            }
+
+        .eye-btn {
+            position: absolute;
+            right: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+            .eye-btn svg {
+                width: 15px;
+                height: 15px;
+                stroke: var(--muted);
+            }
+
+        .forgot {
+            text-align: right;
+            margin-top: -4px;
+            margin-bottom: 18px;
+        }
+
+            .forgot a {
+                font-size: 12px;
+                color: var(--primary-deep);
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+                .forgot a:hover {
+                    text-decoration: underline;
+                }
+
+        .btn-submit {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 11px;
+            background: var(--primary-deep);
+            color: var(--white);
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+            .btn-submit:hover {
+                background: var(--primary-mid);
+            }
+
+        .footer-note {
+            text-align: center;
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="welcome-side">
+            <div class="hospital-badge">
+                <div class="badge-dot"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg></div>
+                โรงพยาบาลส่งเสริมสุขภาพตำบล · SDHPH
+            </div>
+            <h1>ระบบจัดการ<br><span>คลังยาและเวชภัณฑ์</span></h1>
+            <p class="desc">บริหารจัดการยาและเวชภัณฑ์อย่างมีประสิทธิภาพ<br>ครบถ้วน และปลอดภัยด้วยระบบดิจิทัล</p>
+            <div class="feature-item"><div class="feature-chip"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg></div> จัดการคลังยาและเวชภัณฑ์</div>
+            <div class="feature-item"><div class="feature-chip"><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg></div> ระบบขอเบิกและอนุมัติออนไลน์</div>
+            <div class="feature-item"><div class="feature-chip"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg></div> ติดตามสถานะคำขออย่างแม่นยำ</div>
+        </div>
+
+        <div class="form-side">
+            <div class="form-box">
+                <div class="form-logo">
+                    <div class="form-logo-icon"><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg></div>
+                    <div>
+                        <div class="form-logo-text">SDHPH</div>
+                        <div class="form-logo-sub">Inventory Management</div>
+                    </div>
+                </div>
+                <h2>เข้าสู่ระบบ</h2>
+                <p class="sub">กรุณากรอกข้อมูลเพื่อเข้าใช้งานระบบ</p>
+
+                @* 🟢 ส่วนแสดงข้อความแจ้งเตือนเมื่อเกิดความผิดพลาดจากการล็อกอิน (มีไอคอนประกอบเสมอ) *@
+                @if (ViewBag.Error != null)
+                {
+                    <div class="error-alert">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                        <div>
+                            <strong>ไม่สามารถเข้าสู่ระบบได้:</strong> @ViewBag.Error
+                        </div>
+                    </div>
+                }
+
+                <form method="post">
+                    <div class="field-group">
+                        <label>ชื่อผู้ใช้งาน</label>
+                        <div class="field-wrap">
+                            <span class="field-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg></span>
+                            <input type="text" name="username" placeholder="ระบุชื่อผู้ใช้" required>
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label>รหัสผ่าน</label>
+                        <div class="field-wrap">
+                            <span class="field-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span>
+                            <input type="password" name="password" id="pwInput" placeholder="ระบุรหัสผ่าน" required>
+                            <button type="button" class="eye-btn" id="eyeBtn"><svg id="eyeIcon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg></button>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit">เข้าสู่ระบบ</button>
+                </form>
+                <div class="footer-note">สงวนสิทธิ์สำหรับบุคลากรโรงพยาบาลเท่านั้น<br>ติดต่อ IT Support: ต่อ 1234</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const pw = document.getElementById('pwInput');
+        const btn = document.getElementById('eyeBtn');
+        const icon = document.getElementById('eyeIcon');
+
+        btn.addEventListener('click', () => {
+            if (pw.type === 'password') {
+                pw.type = 'text';
+                // เปลี่ยนไอคอนตาเมื่อเปิดรหัสผ่าน
+                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22" />';
+            }
+            else {
+                pw.type = 'password';
+                // เปลี่ยนกลับเป็นรูปตาปกติ
+                icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />';
+            }
+        });
+    </script>
+</body>
+</html>

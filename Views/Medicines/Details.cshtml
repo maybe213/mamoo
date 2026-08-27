@@ -1,0 +1,224 @@
+﻿@model DrugInventoryPro.Models.Medicines
+
+@{
+    ViewData["Title"] = "รายละเอียดข้อมูลยา";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    /* 🌟 ตัวแปรธีม Medical UI/UX (Clean & Muted) */
+    :root {
+        --app-bg: #F4F5F7;
+        --card-bg: #FFFFFF;
+        --text-main: #333333;
+        --text-muted: #64748B;
+        --border-color: #E2E8F0;
+        --color-primary: #026AA7;
+        --color-primary-hover: #025383;
+        --color-primary-light: #F0F9FF;
+        --stock-green-bg: #ECFDF5;
+        --stock-green-text: #065F46;
+    }
+
+    body {
+        background-color: var(--app-bg);
+        font-family: 'Sarabun', sans-serif;
+        color: var(--text-main);
+    }
+
+    .details-container {
+        max-width: 780px;
+        margin: 40px auto;
+    }
+
+    .card-details {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--card-bg);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    .card-header-details {
+        background-color: #F8F9FA;
+        border-bottom: 1px solid var(--border-color);
+        border-top: 4px solid var(--color-primary);
+        padding: 20px 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .med-header-icon {
+        width: 48px;
+        height: 48px;
+        background-color: var(--color-primary-light);
+        border: 1px solid #BAE6FD;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--color-primary);
+        font-size: 1.5rem;
+    }
+
+    .detail-row {
+        padding: 16px 0;
+        border-bottom: 1px solid #F1F5F9;
+        display: flex;
+        align-items: center;
+    }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+    .detail-label {
+        font-weight: 600;
+        color: var(--text-muted);
+        width: 35%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.95rem;
+    }
+
+        .detail-label i {
+            color: var(--color-primary);
+            font-size: 1.1rem;
+        }
+
+    .detail-value {
+        font-weight: 600;
+        color: var(--text-main);
+        width: 65%;
+        font-size: 1rem;
+    }
+
+    .text-primary-bold {
+        color: var(--color-primary) !important;
+        font-weight: 700;
+    }
+
+    .badge-stock {
+        background-color: var(--stock-green-bg);
+        color: var(--stock-green-text);
+        border: 1px solid #A7F3D0;
+        font-weight: 600;
+        font-size: 0.95rem;
+        padding: 6px 14px;
+        border-radius: 50px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-edit-primary {
+        background-color: var(--color-primary);
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .btn-edit-primary:hover {
+            background-color: var(--color-primary-hover);
+            color: white;
+            box-shadow: 0 4px 12px rgba(2, 106, 167, 0.25);
+        }
+
+    .btn-back-outline {
+        color: var(--text-muted);
+        border: 1px solid #CBD5E1;
+        background-color: #FFFFFF;
+        padding: 10px 24px;
+        border-radius: 50px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .btn-back-outline:hover {
+            background-color: #F1F5F9;
+            color: var(--text-main);
+        }
+</style>
+
+<div class="details-container">
+    <div class="card card-details">
+        <!-- Card Header -->
+        <div class="card-header-details">
+            <div>
+                <h3 class="m-0 fw-bold text-dark">@(Model?.Medicine_name ?? "ไม่ระบุชื่อยา")</h3>
+                <small class="text-muted font-monospace">รหัสยา (Medicine ID): @Model?.Medicine_id</small>
+            </div>
+            <div class="med-header-icon shadow-sm">
+                <i class="bi bi-capsule-pill"></i>
+            </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="card-body p-4">
+            <div class="detail-row">
+                <div class="detail-label"><i class="bi bi-tag"></i> หมวดหมู่ยา</div>
+                <div class="detail-value">@(Model?.Category?.Category_name ?? Model?.Category_id ?? "ไม่ระบุหมวดหมู่")</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label"><i class="bi bi-box-seam"></i> หน่วยนับ</div>
+                <div class="detail-value">@(Model?.Unit_id?.ToString() ?? "ไม่ระบุ")</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label"><i class="bi bi-hash"></i> เลข Lot</div>
+                <div class="detail-value">
+                    <code class="px-2 py-1 bg-light rounded text-dark border font-monospace">@(Model?.Lot ?? "ไม่ระบุ")</code>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label"><i class="bi bi-cash-stack"></i> ราคาต่อหน่วย</div>
+                <div class="detail-value text-primary-bold fs-5">
+                    @(Model != null ? Model.Price.ToString("N2") : "0.00") <span class="fs-6 text-muted fw-normal">บาท</span>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label"><i class="bi bi-archive"></i> คงเหลือในคลัง</div>
+                <div class="detail-value">
+                    <span class="badge-stock shadow-sm">
+                        <i class="bi bi-box"></i> @(Model?.Stock?.ToString("N0") ?? "0") @Model?.Unit_id
+                    </span>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label"><i class="bi bi-calendar-x"></i> วันหมดอายุ</div>
+                <div class="detail-value">
+                    @(Model?.Expired_at?.ToString("dd MMMM yyyy") ?? "ไม่ระบุ")
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="mt-4 pt-3 d-flex justify-content-between align-items-center border-top">
+                <a asp-action="Index" class="btn-back-outline shadow-sm">
+                    <i class="bi bi-arrow-left"></i> ย้อนกลับ
+                </a>
+                <a asp-action="Edit" asp-route-id="@Model?.Medicine_id" class="btn-edit-primary shadow-sm">
+                    <i class="bi bi-pencil-square"></i> แก้ไขข้อมูลยานี้
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">

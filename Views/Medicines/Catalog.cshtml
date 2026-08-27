@@ -1,0 +1,285 @@
+﻿@{
+    ViewData["Title"] = "รายการยาและเวชภัณฑ์";
+    var medicines = ViewBag.Medicines as IEnumerable<DrugInventoryPro.Models.Medicines>;
+    var supplies = ViewBag.Supplies as IEnumerable<DrugInventoryPro.Models.Medicines>;
+}
+
+<style>
+    :root {
+        --primary-color: #2563EB;
+        --primary-hover: #1D4ED8;
+        --bg-main: #F8FAFC;
+        --card-bg: #FFFFFF;
+        --text-dark: #0F172A;
+        --text-muted: #64748B;
+        --border-color: #E2E8F0;
+    }
+
+    body {
+        background-color: var(--bg-main);
+        font-family: 'Sarabun', sans-serif;
+        color: var(--text-dark);
+    }
+
+    code {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        color: #334155;
+        background-color: #F1F5F9;
+        border: 1px solid #CBD5E1;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-block;
+        letter-spacing: 0.3px;
+    }
+
+    .inventory-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .nav-tabs-custom {
+        border-bottom: 2px solid var(--border-color);
+        gap: 8px;
+    }
+
+        .nav-tabs-custom .nav-link {
+            color: var(--text-muted);
+            font-weight: 600;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 12px 22px;
+            border-radius: 10px 10px 0 0;
+            transition: all 0.2s ease-in-out;
+            background: transparent;
+        }
+
+            .nav-tabs-custom .nav-link:hover {
+                color: var(--primary-color);
+                background-color: #F1F5F9;
+            }
+
+            .nav-tabs-custom .nav-link.active {
+                color: var(--primary-color);
+                border-bottom-color: var(--primary-color);
+                background-color: #FFFFFF;
+                font-weight: 700;
+            }
+
+    .tab-badge {
+        font-size: 0.75rem;
+        padding: 3px 10px;
+        border-radius: 12px;
+        background-color: #E2E8F0;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+
+    .nav-link.active .tab-badge {
+        background-color: #DBEAFE;
+        color: var(--primary-color);
+    }
+
+    .table-modern {
+        margin-bottom: 0;
+    }
+
+        .table-modern thead {
+            background-color: #F8FAFC;
+        }
+
+            .table-modern thead th {
+                color: #475569;
+                font-weight: 700;
+                font-size: 0.825rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                padding: 16px;
+                border-bottom: 2px solid var(--border-color);
+            }
+
+        .table-modern tbody tr {
+            transition: background-color 0.15s ease;
+        }
+
+            .table-modern tbody tr:hover {
+                background-color: #F1F5F9;
+            }
+
+        .table-modern td {
+            padding: 16px;
+            vertical-align: middle;
+            font-size: 0.925rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+    .search-box input {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        transition: all 0.2s ease;
+    }
+
+        .search-box input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.15);
+        }
+</style>
+
+<div class="container py-4">
+    <!-- Header Section -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-box-seam text-primary"></i>
+                รายการยาและเวชภัณฑ์ในคลัง
+            </h2>
+            <p class="text-muted small mb-0">แคตตาล็อกแสดงรายการสินค้าทั้งหมดและจำนวนคงเหลือในคลัง</p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-box position-relative" style="max-width: 320px; width: 100%;">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+            <input type="text" id="inventorySearch" class="form-control ps-5 rounded-pill border-secondary-subtle" placeholder="ค้นหาชื่อหรือรหัส...">
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs nav-tabs-custom" id="inventoryTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active d-flex align-items-center gap-2" id="medicines-tab" data-bs-toggle="tab" data-bs-target="#medicines-pane" type="button" role="tab">
+                <i class="bi bi-capsule fs-5"></i>
+                <span>รายการยา</span>
+                <span class="tab-badge">@(medicines?.Count() ?? 0)</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex align-items-center gap-2" id="supplies-tab" data-bs-toggle="tab" data-bs-target="#supplies-pane" type="button" role="tab">
+                <i class="bi bi-bandaid fs-5"></i>
+                <span>รายการเวชภัณฑ์</span>
+                <span class="tab-badge">@(supplies?.Count() ?? 0)</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Contents -->
+    <div class="tab-content mt-3" id="inventoryTabsContent">
+        <!-- Tab 1: รายการยา -->
+        <div class="tab-pane fade show active" id="medicines-pane" role="tabpanel">
+            <div class="inventory-card overflow-hidden">
+                @{
+                    await RenderInventoryTable(medicines, "ยา");
+                }
+            </div>
+        </div>
+
+        <!-- Tab 2: รายการเวชภัณฑ์ -->
+        <div class="tab-pane fade" id="supplies-pane" role="tabpanel">
+            <div class="inventory-card overflow-hidden">
+                @{
+                    await RenderInventoryTable(supplies, "เวชภัณฑ์");
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Local Helper Function สำหรับเรนเดอร์ตาราง *@
+@{
+    async Task RenderInventoryTable(IEnumerable<DrugInventoryPro.Models.Medicines>? items, string categoryLabel)
+    {
+        <div class="table-responsive">
+            <table class="table table-modern align-middle mb-0 inventory-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 15%;">รหัส @categoryLabel</th>
+                        <th style="width: 40%;">ชื่อ @categoryLabel</th>
+                        <th style="width: 25%;">หมวดหมู่ / สรรพคุณ</th>
+                        <th class="text-center" style="width: 20%;">สต็อกคงเหลือ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (items != null && items.Any())
+                    {
+                        foreach (var item in items)
+                        {
+                            var stock = item.Stock ?? 0;
+                            var rop = item.Quantity ?? 0;
+                            var unit = item.MedicineUnit?.Unit_name ?? "";
+
+                            <tr class="item-row">
+                                <td class="ps-4">
+                                    <code>@item.Medicine_id</code>
+                                </td>
+                                <td class="fw-bold text-dark item-name">
+                                    @(item.Medicine_name ?? "-")
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-2">
+                                        @(item.Category?.Category_name ?? item.Account_Type ?? "-")
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    @if (stock <= 0)
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill fw-medium">
+                                            <i class="bi bi-x-circle me-1"></i> สินค้าหมด
+                                        </span>
+                                    }
+                                    else if (stock <= rop)
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill fw-bold">
+                                            <i class="bi bi-exclamation-triangle me-1"></i> @stock @unit (สต็อกต่ำ)
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-medium">
+                                            <i class="bi bi-check-circle me-1"></i> @stock @unit
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                <span>ไม่พบข้อมูลรายการ @categoryLabel ในระบบ</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@* Client-side Search Script *@
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("inventorySearch");
+
+        function filterItems() {
+            const filter = searchInput.value.toLowerCase();
+            const activePane = document.querySelector(".tab-pane.active");
+            if (!activePane) return;
+
+            const rows = activePane.querySelectorAll(".item-row");
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? "" : "none";
+            });
+        }
+
+        searchInput.addEventListener("keyup", filterItems);
+
+        const tabLinks = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabLinks.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', filterItems);
+        });
+    });
+</script>

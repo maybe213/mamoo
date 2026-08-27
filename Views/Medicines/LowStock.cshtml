@@ -1,0 +1,232 @@
+﻿@model IEnumerable<DrugInventoryPro.Models.LowStockViewModel>
+
+@{
+    ViewData["Title"] = "ระบบแจ้งเตือนสต็อกต่ำอัตโนมัติ (Automated ROP Alert)";
+}
+
+<style>
+    :root {
+        --med-bg: #F8FAFC;
+        --med-card-bg: #FFFFFF;
+        --med-text-main: #1E293B;
+        --med-text-muted: #64748B;
+        --med-border: #E2E8F0;
+        --med-header-bg: #FFFFFF;
+        --alert-danger-text: #DC2626;
+        --alert-danger-bg: #FEF2F2;
+        --alert-warning-text: #D97706;
+        --alert-warning-bg: #FFFBEB;
+    }
+
+    body {
+        background-color: var(--med-bg);
+        font-family: 'Sarabun', sans-serif;
+        color: var(--med-text-main);
+    }
+
+    .page-title {
+        color: #0F172A;
+        font-weight: 700;
+        font-size: 1.35rem;
+    }
+
+    .page-subtitle {
+        color: var(--med-text-muted);
+        font-size: 0.875rem;
+    }
+
+    .card-med-table {
+        border: 1px solid var(--med-border);
+        border-radius: 12px;
+        background: var(--med-card-bg);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+        overflow: hidden;
+    }
+
+    .table-med {
+        margin: 0;
+    }
+
+        .table-med thead th {
+            color: #0284C7;
+            font-weight: 700;
+            font-size: 0.875rem;
+            padding: 16px;
+            border-bottom: 1px solid var(--med-border);
+            background-color: #FFFFFF;
+        }
+
+        .table-med tbody td {
+            padding: 16px;
+            color: var(--med-text-main);
+            border-bottom: 1px solid #F1F5F9;
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+
+    .badge-status {
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        max-width: 200px;
+    }
+
+    .badge-expired {
+        background-color: #FEF2F2;
+        color: #EF4444;
+        border: 1px solid #FCA5A5;
+    }
+
+    .badge-expiring {
+        background-color: #FFFBEB;
+        color: #D97706;
+        border: 1px solid #FDE68A;
+    }
+
+    .badge-reorder {
+        background-color: #EFF6FF;
+        color: #2563EB;
+        border: 1px solid #BFDBFE;
+    }
+
+    .badge-critical {
+        background-color: #FEF2F2;
+        color: #DC2626;
+        border: 1px solid #FECACA;
+    }
+
+    .code-badge {
+        background-color: #F8FAFC;
+        color: #475569;
+        border: 1px solid #E2E8F0;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-family: monospace;
+        font-size: 0.825rem;
+        font-weight: 600;
+    }
+</style>
+
+<div class="container-fluid px-4 py-4">
+
+    <!-- Header Section -->
+    <div class="mb-4">
+        <h2 class="page-title mb-1 d-flex align-items-center gap-2">
+            <span style="color: #F59E0B;">🔔</span>
+            <span>ระบบแจ้งเตือนสต็อกต่ำอัตโนมัติ (Automated ROP Alert)</span>
+        </h2>
+        <p class="page-subtitle mb-0">คำนวณเรียลไทม์จาก Safety Stock ของแพทย์/เภสัชกร ประวัติการตัดจ่าย และจำนวนคงเหลือจริง</p>
+    </div>
+
+    <!-- Main Data Table Card -->
+    <div class="card card-med-table">
+        <div class="table-responsive">
+            <table class="table table-med align-middle">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 10%;">รหัสยา</th>
+                        <th style="width: 25%;">ชื่อเวชภัณฑ์/ยา</th>
+                        <th class="text-center" style="width: 13%;">สต็อกคงเหลือ</th>
+                        <th class="text-center" style="width: 12%;">Safety Stock</th>
+                        <th class="text-center" style="width: 12%;">จุด ROP</th>
+                        <th class="text-center" style="width: 13%;">แนะนำสั่งซื้อ (ROQ)</th>
+                        <th class="text-center" style="width: 15%;">สถานะการแจ้งเตือน</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            var unit = item.Medicine.MedicineUnit?.Unit_name ?? "หน่วย";
+
+                            <tr>
+                                <!-- Code -->
+                                <td class="text-center">
+                                    <span class="code-badge">@item.Medicine.Medicine_id</span>
+                                </td>
+
+                                <!-- Medicine Name -->
+                                <td class="fw-bold text-dark">
+                                    <span class="text-primary me-1">💊</span>
+                                    @(item.Medicine.Medicine_name ?? "ไม่ระบุชื่อยา")
+                                </td>
+
+                                <!-- Current Stock -->
+                                <td class="text-center fw-bold fs-6">
+                                    @item.CurrentStock @unit
+                                </td>
+
+                                <!-- Safety Stock -->
+                                <td class="text-center text-muted">
+                                    @item.SafetyStock @unit
+                                </td>
+
+                                <!-- ROP -->
+                                <td class="text-center fw-semibold">
+                                    @item.ReorderPoint @unit
+                                </td>
+
+                                <!-- Suggested ROQ -->
+                                <td class="text-center">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fs-6 fw-bold">
+                                        +@item.SuggestedROQ @unit
+                                    </span>
+                                </td>
+
+                                <!-- Status Badges -->
+                                <td class="text-center">
+                                    <div class="d-flex flex-column gap-1 align-items-center">
+                                        @if (item.IsCritical)
+                                        {
+                                            <span class="badge-status badge-critical">
+                                                <i class="bi bi-exclamation-octagon-fill"></i> สต็อกวิกฤต 
+                                            </span>
+                                        }
+                                        else if (item.IsReorder)
+                                        {
+                                            <span class="badge-status badge-reorder">
+                                                <i class="bi bi-cart-plus-fill"></i> ต้องสั่งซื้อเพิ่ม (&le; ROP)
+                                            </span>
+                                        }
+
+                                        @if (item.IsExpired)
+                                        {
+                                            <span class="badge-status badge-expired">
+                                                <i class="bi bi-x-circle-fill"></i> หมดอายุแล้ว
+                                            </span>
+                                        }
+                                        else if (item.IsExpiringSoon)
+                                        {
+                                            <span class="badge-status badge-expiring">
+                                                <i class="bi bi-clock-history"></i> ใกล้หมดอายุ (&le; 30 วัน)
+                                            </span>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <div class="d-flex flex-column align-items-center gap-2">
+                                    <span class="fs-1 text-success">✅</span>
+                                    <span class="fw-bold text-dark">สต็อกสินค้าอยู่ในระดับปกติทุกรายการ</span>
+                                    <small class="text-muted">ไม่มีรายการยาที่ตกถึงจุดสั่งซื้อเพิ่ม (ROP)</small>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

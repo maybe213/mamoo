@@ -1,0 +1,224 @@
+﻿@model DrugInventoryPro.Models.User
+
+@{
+    ViewData["Title"] = "แก้ไขข้อมูลผู้ใช้";
+}
+
+<style>
+    :root {
+        --theme-primary: #0d6efd;
+        --theme-primary-hover: #0b5ed7;
+        --theme-dark: #212529;
+        --theme-light-bg: #f8f9fa;
+        --theme-hover-bg: #f1f8ff;
+        --theme-border: #dee2e6;
+    }
+
+    body {
+        background-color: var(--theme-light-bg);
+        font-family: 'Sarabun', sans-serif;
+    }
+
+    .container-custom {
+        max-width: 850px;
+        margin-top: 30px;
+        margin-bottom: 40px;
+    }
+
+    /* Card Styling */
+    .card-edit {
+        background-color: #ffffff;
+        border: 1px solid var(--theme-border);
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .card-header-edit {
+        background-color: var(--theme-dark);
+        color: #ffffff;
+        padding: 20px;
+        text-align: center;
+    }
+
+    /* Section Label */
+    .section-label {
+        color: var(--theme-primary);
+        font-weight: bold;
+        border-bottom: 2px solid var(--theme-hover-bg);
+        padding-bottom: 8px;
+        margin-bottom: 20px;
+        font-size: 0.95rem;
+    }
+
+    /* Form Field Styling */
+    .form-group-label {
+        font-weight: 600;
+        color: var(--theme-dark);
+        font-size: 0.88rem;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+    }
+
+        .form-group-label i {
+            margin-right: 8px;
+            color: var(--theme-primary);
+        }
+
+    .form-control, .form-select {
+        border: 1px solid var(--theme-border);
+        border-radius: 8px;
+        padding: 10px 12px;
+        transition: all 0.2s ease;
+    }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--theme-primary);
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+            outline: none;
+        }
+
+    .id-display {
+        background-color: var(--theme-light-bg) !important;
+        color: #6c757d !important;
+        font-weight: bold;
+        border: 1px dashed #ced4da !important;
+    }
+
+    /* Action Buttons */
+    .btn-theme-primary {
+        background-color: var(--theme-primary);
+        color: #ffffff;
+        border: none;
+        padding: 10px 28px;
+        border-radius: 8px;
+        font-weight: bold;
+        transition: all 0.2s ease;
+    }
+
+        .btn-theme-primary:hover {
+            background-color: var(--theme-primary-hover);
+            color: #ffffff;
+        }
+
+    .btn-theme-secondary {
+        background-color: var(--theme-dark);
+        color: #ffffff;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: bold;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+        .btn-theme-secondary:hover {
+            background-color: #343a40;
+            color: #ffffff;
+        }
+</style>
+
+<div class="container container-custom">
+    <div class="card card-edit">
+        <div class="card-header-edit">
+            <h3 class="m-0"><i class="bi bi-pencil-square me-2"></i>แก้ไขข้อมูลผู้ใช้งาน</h3>
+            <small class="text-white-50">ปรับปรุงข้อมูลบัญชีและสิทธิ์การเข้าใช้งาน</small>
+        </div>
+
+        <form method="post" class="card-body p-4 p-md-5">
+            @* ป้องกัน User_id ตกหล่นระหว่างการ Submit กลับไปที่ Controller *@
+            <input type="hidden" asp-for="User_id" />
+
+            <!-- ส่วนที่ 1: ข้อมูลบัญชีและสิทธิ์ -->
+            <div class="section-label"><i class="bi bi-shield-lock-fill me-1"></i> ข้อมูลบัญชีและสิทธิ์</div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-group-label"><i class="bi bi-hash"></i> รหัสผู้ใช้ (แก้ไขไม่ได้)</label>
+                    <input class="form-control id-display" value="@Model.User_id" readonly />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-group-label"><i class="bi bi-person-circle"></i> ชื่อผู้ใช้ (Username)</label>
+                    <input asp-for="Username" class="form-control" required />
+                    <span asp-validation-for="Username" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-group-label"><i class="bi bi-key-fill"></i> รหัสผ่าน</label>
+                    <input asp-for="Password" type="password" class="form-control" required />
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-group-label"><i class="bi bi-person-badge-fill"></i> ระดับสิทธิ์ (Role)</label>
+                    <select asp-for="Role" class="form-select" required>
+                        <option value="Admin">Admin</option>
+                        <option value="Pharmacist">Pharmacist</option>
+                        <option value="Staff">Staff</option>
+                    </select>
+                    <span asp-validation-for="Role" class="text-danger small"></span>
+                </div>
+                <!-- 🏥 ส่วนเลือกแผนกที่สังกัด -->
+                <div class="col-md-6">
+                    <label class="form-group-label"><i class="bi bi-hospital-fill"></i> แผนกที่สังกัด</label>
+                    <select asp-for="Department_id" asp-items="ViewBag.Departments" class="form-select" required>
+                        <option value="" disabled>-- เลือกแผนก --</option>
+                    </select>
+                    <span asp-validation-for="Department_id" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <!-- ส่วนที่ 2: ข้อมูลส่วนตัวและติดต่อ -->
+            <div class="section-label"><i class="bi bi-person-lines-fill me-1"></i> ข้อมูลส่วนตัวและติดต่อ</div>
+            <div class="row g-3 mb-4">
+
+                <!-- ฟิลด์ย่อย: คำนำหน้าชื่อ ชื่อจริง นามสกุล -->
+                <div class="col-md-6">
+                    <label class="form-group-label"><i class="bi bi-person-vcard-fill"></i> ชื่อ - นามสกุล (ภาษาไทย)</label>
+                    <div class="input-group">
+                        <select asp-for="Title" class="form-select" style="max-width: 110px;" required>
+                            <option value="นาย">นาย</option>
+                            <option value="นาง">นาง</option>
+                            <option value="นางสาว">นางสาว</option>
+                            <option value="ภก.">ภก.</option>
+                            <option value="ภญ.">ภญ.</option>
+                            <option value="นพ.">นพ.</option>
+                            <option value="พญ.">พญ.</option>
+                            <option value="ดร.">ดร.</option>
+                        </select>
+                        <input asp-for="Firstname" class="form-control" placeholder="ชื่อจริง"
+                               required pattern="^[ก-๙]+$" title="กรุณากรอกชื่อจริงเป็นภาษาไทยเท่านั้น" />
+                        <input asp-for="Lastname" class="form-control" placeholder="นามสกุล"
+                               required pattern="^[ก-๙]+$" title="กรุณากรอกนามสกุลเป็นภาษาไทยเท่านั้น" />
+                    </div>
+                    <span asp-validation-for="Firstname" class="text-danger small"></span>
+                    <span asp-validation-for="Lastname" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-group-label"><i class="bi bi-telephone-fill"></i> เบอร์โทรศัพท์</label>
+                    <input asp-for="P_number" class="form-control" required placeholder="เช่น 0812345678"
+                           pattern="^[0-9]{9,10}$" title="กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 9-10 หลัก" />
+                    <span asp-validation-for="P_number" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-group-label"><i class="bi bi-envelope-at-fill"></i> อีเมล</label>
+                    <input asp-for="Em" type="email" class="form-control" placeholder="example@email.com" />
+                    <span asp-validation-for="Em" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <!-- ปุ่มกดยืนยัน/ยกเลิก -->
+            <div class="d-flex justify-content-between border-top pt-4">
+                <a asp-action="Index" class="btn btn-theme-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> ยกเลิก
+                </a>
+                <button type="submit" class="btn btn-theme-primary shadow-sm">
+                    <i class="bi bi-save-fill me-1"></i> บันทึกการเปลี่ยนแปลง
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* นำเข้า Bootstrap Icons *@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">

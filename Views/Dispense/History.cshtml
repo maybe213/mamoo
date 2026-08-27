@@ -1,0 +1,52 @@
+﻿@model IEnumerable<DrugInventoryPro.Models.Dispense>
+@{
+    ViewData["Title"] = "ประวัติการเบิกจ่ายเดือนนี้";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-purple"><i class="bi bi-cart-check me-2"></i>ประวัติการเบิกจ่ายเดือนนี้</h2>
+        <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> กลับหน้าหลัก
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>เลขที่ใบเบิก</th>
+                            <th>วันที่เบิก</th>
+                            <th>แผนกที่เบิก</th>
+                            <th>สถานะ</th>
+                     
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Any())
+                        {
+                            <tr><td colspan="5" class="text-center py-4 text-muted">ไม่มีรายการเบิกจ่ายในเดือนนี้</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td><code>@item.Dispense_id</code></td>
+                                    <td>@(item.Dispense_date?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                    <td>@(item.Departments?.Department_name ?? item.Department_id ?? "-")</td>
+                                    <td><span class="badge bg-success">@item.Status</span></td>
+                                    <td class="text-center">
+                                  
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,266 @@
+@model DrugInventoryPro.Models.Medicines
+@{
+    ViewData["Title"] = "แก้ไขข้อมูลยาและเวชภัณฑ์";
+}
+
+<style>
+    /* กำหนดตัวแปรชุดสีให้สอดคล้องกับระบบหลัก */
+    :root {
+        --theme-dark: #212529;
+        --theme-primary: #0d6efd;
+        --theme-primary-hover: #0b5ed7;
+        --theme-white: #ffffff;
+        --theme-border: #dee2e6;
+        --theme-focus-ring: rgba(13, 110, 253, 0.25);
+    }
+
+    .form-card {
+        background: var(--theme-white);
+        border: 2px solid var(--theme-dark);
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 880px;
+        margin: 0 auto;
+    }
+
+    .section-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--theme-primary);
+        border-bottom: 2px solid var(--theme-primary);
+        padding-bottom: 6px;
+        margin-bottom: 20px;
+        margin-top: 28px;
+    }
+
+    .form-label {
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--theme-dark);
+        margin-bottom: 6px;
+    }
+
+    .form-control, .form-select {
+        border: 1.5px solid #ced4da;
+        border-radius: 8px;
+        padding: 9px 14px;
+        font-size: 14px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--theme-primary);
+            box-shadow: 0 0 0 3px var(--theme-focus-ring);
+            outline: none;
+        }
+
+    .id-badge {
+        background: var(--theme-dark);
+        color: var(--theme-white);
+        font-family: monospace;
+        font-size: 13px;
+        padding: 4px 14px;
+        border-radius: 20px;
+        display: inline-block;
+    }
+
+    .btn-save {
+        background: var(--theme-primary);
+        color: var(--theme-white);
+        border: none;
+        padding: 10px 32px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+    }
+
+        .btn-save:hover {
+            background: var(--theme-primary-hover);
+            color: var(--theme-white);
+        }
+
+    .btn-cancel {
+        background: var(--theme-white);
+        color: var(--theme-dark);
+        border: 2px solid var(--theme-dark);
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 0.2s, color 0.2s;
+    }
+
+        .btn-cancel:hover {
+            background: var(--theme-dark);
+            color: var(--theme-white);
+        }
+</style>
+
+<div class="container py-4">
+    <div class="form-card shadow-sm">
+
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+                <h4 class="fw-bold mb-1">
+                    <!-- ปรับสีไอคอนให้เป็นสีน้ำเงินตามธีม -->
+                    <i class="bi bi-pencil-square me-2 text-primary"></i>แก้ไขข้อมูลยาและเวชภัณฑ์
+                </h4>
+                <span class="text-muted" style="font-size:13px">รหัส:</span>
+                <span class="id-badge ms-1">@Model.Medicine_id</span>
+            </div>
+            <a asp-action="Index" class="btn-cancel">
+                <i class="bi bi-arrow-left me-1"></i>กลับ
+            </a>
+        </div>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger border-2 border-danger rounded-3 mt-3">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>กรุณาตรวจสอบข้อมูล:</strong>
+                <ul class="mb-0 mt-2 ps-3">
+                    @foreach (var state in ViewData.ModelState.Values)
+                    {
+                        foreach (var error in state.Errors)
+                        {
+                            <li style="font-size:13px">@error.ErrorMessage</li>
+                        }
+                    }
+                </ul>
+            </div>
+        }
+
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input asp-for="Medicine_id" type="hidden" />
+
+            @* ── ส่วนที่ 1: ข้อมูลพื้นฐาน ── *@
+            <div class="section-title">1 · ข้อมูลพื้นฐาน</div>
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">ชื่อยา / เวชภัณฑ์ <span class="text-danger">*</span></label>
+                    <input asp-for="Medicine_name" class="form-control" placeholder="ชื่อยาหรือเวชภัณฑ์" required />
+                    <span asp-validation-for="Medicine_name" class="text-danger" style="font-size:12px"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">หมวดหมู่ <span class="text-danger">*</span></label>
+                    <select asp-for="Category_id" class="form-select">
+                        <option value="">-- เลือกหมวดหมู่ --</option>
+
+                        @foreach (var c in ViewBag.Categories)
+                        {
+                            <option value="@c.Category_id">
+                                @c.Category_name
+                            </option>
+                        }
+                    </select>
+                    <span asp-validation-for="Category_id" class="text-danger" style="font-size:12px"></span>
+                </div>
+            </div>
+
+            @* ── ส่วนที่ 2: สต็อกและราคา ── *@
+            <div class="section-title">2 · สต็อกและราคา</div>
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">กำหนดสต็อกขั้นต่ำ</label>
+                    <input asp-for="SafetyStock" type="number" min="0" class="form-control" />
+                    <span asp-validation-for="SafetyStock" class="text-danger" style="font-size:12px"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">สต็อกคงเหลือล่าสุด</label>
+                    <input asp-for="Stock" type="number" min="0" class="form-control" />
+                    <span asp-validation-for="Stock" class="text-danger" style="font-size:12px"></span>
+                </div>
+
+                @* ✅ แก้ไข: ปรับปรุงการเปรียบเทียบค่าโดยใช้ตัวแปรประเภทสตริงเพื่อแปลงข้อมูล (int กับ string) ป้องกันหน้าจอค้างหรือเลือกหน่วยผิดพลาด *@
+                <div class="col-md-3">
+                    <label class="form-label">หน่วยนับ</label>
+                    <select asp-for="Unit_id" class="form-select">
+
+                        <option value="">-- เลือกหน่วยนับ --</option>
+
+                        @foreach (var unit in ViewBag.Units)
+                        {
+                            <option value="@unit.Unit_id"
+                                    selected="@(Model.Unit_id == unit.Unit_id)">
+                                @unit.Unit_name (@unit.Group_name)
+                            </option>
+                        }
+
+                    </select>
+                    <span asp-validation-for="Unit_id" class="text-danger" style="font-size:12px"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">ราคาทุน (บาท)</label>
+                    <input asp-for="Price" type="number" step="0.01" min="0" class="form-control" />
+                    <span asp-validation-for="Price" class="text-danger" style="font-size:12px"></span>
+                </div>
+            </div>
+
+            @* ── ส่วนที่ 3: ล็อตและวันหมดอายุ ── *@
+            <div class="section-title">3 · ล็อตและวันหมดอายุ</div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">เลขล็อต (Lot Number)</label>
+                    <input asp-for="Lot" class="form-control" placeholder="เช่น LOT-20240101" />
+                    <span asp-validation-for="Lot" class="text-danger" style="font-size:12px"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">วันหมดอายุ</label>
+                    <input type="date" asp-for="Expired_at" class="form-control"
+                           value="@(Model.Expired_at.HasValue? Model.Expired_at.Value.ToString("yyyy-MM-dd") : "")" />
+                    <span asp-validation-for="Expired_at" class="text-danger" style="font-size:12px"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">ขนาดบรรจุ</label>
+                    <input asp-for="Packing_Size" class="form-control" placeholder="เช่น 10 เม็ด/แผง" />
+                    <span asp-validation-for="Packing_Size" class="text-danger" style="font-size:12px"></span>
+                </div>
+            </div>
+
+            @* ── ส่วนที่ 4: ข้อมูลเพิ่มเติม ── *@
+            <div class="section-title">4 · ข้อมูลเพิ่มเติม</div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">ประเภทบัญชียา</label>
+                    <select asp-for="Account_Type" class="form-select">
+                        <option value="">-- เลือกประเภท --</option>
+                        @foreach (var t in new[] { "NED", "ED" })
+                        {
+                            <option value="@t" selected="@(Model.Account_Type == t)">บัญชียา @t</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Account_Type" class="text-danger" style="font-size:12px"></span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">สถานะ</label>
+                    <select asp-for="Status" class="form-select">
+                        <option value="Active" selected="@(Model.Status == "Active")">ใช้งานอยู่</option>
+                        <option value="Inactive" selected="@(Model.Status == "Inactive")">ไม่ใช้งาน</option>
+                    </select>
+                    <span asp-validation-for="Status" class="text-danger" style="font-size:12px"></span>
+                </div>
+            </div>
+
+            <div class="d-flex gap-3 align-items-center mt-4 pt-3 border-top">
+                <button type="submit" class="btn-save">
+                    <i class="bi bi-floppy-fill me-2"></i>บันทึกการแก้ไข
+                </button>
+                <a asp-action="Index" class="btn-cancel">ยกเลิก</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

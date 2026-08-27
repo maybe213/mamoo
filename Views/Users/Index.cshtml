@@ -1,0 +1,211 @@
+﻿@model List<DrugInventoryPro.Models.User>
+
+@{
+    ViewData["Title"] = "จัดการผู้ใช้งาน";
+}
+
+<style>
+    :root {
+        --theme-primary: #0d6efd;
+        --theme-primary-hover: #0b5ed7;
+        --theme-dark: #212529;
+        --theme-light-bg: #f8f9fa;
+        --theme-hover-bg: #f1f8ff;
+        --theme-border: #dee2e6;
+    }
+
+    body {
+        background-color: var(--theme-light-bg);
+        font-family: 'Sarabun', sans-serif;
+    }
+
+    /* Table Container & Base Styling */
+    .table-container {
+        background: #ffffff;
+        padding: 25px;
+        border-radius: 16px;
+        border: 1px solid var(--theme-border);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+
+    .table-user {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+        .table-user thead th {
+            background: var(--theme-dark);
+            color: #ffffff;
+            padding: 15px;
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            border: none;
+        }
+
+        .table-user tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+            .table-user tbody tr:hover {
+                background-color: var(--theme-hover-bg) !important;
+            }
+
+        .table-user td {
+            padding: 15px !important;
+            border-bottom: 1px solid var(--theme-border);
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+    /* Role Badges */
+    .badge-role {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: bold;
+        font-size: 0.75rem;
+        display: inline-block;
+        min-width: 85px;
+    }
+
+    .bg-admin {
+        background: var(--theme-dark);
+        color: #ffffff;
+    }
+
+    .bg-pharma {
+        background: var(--theme-primary);
+        color: #ffffff;
+    }
+
+    .bg-staff {
+        background: #e9ecef;
+        color: var(--theme-dark);
+        border: 1px solid var(--theme-border);
+    }
+
+    /* Action Buttons (ตรงตามคลังยา) */
+    .btn-theme-edit {
+        background: var(--theme-dark);
+        color: #ffffff;
+        border: none;
+        transition: all 0.2s ease;
+    }
+
+        .btn-theme-edit:hover {
+            background: var(--theme-primary);
+            color: #ffffff;
+        }
+
+    .btn-theme-del {
+        border: 1px solid #dc3545;
+        color: #dc3545;
+        background: transparent;
+        transition: all 0.2s ease;
+    }
+
+        .btn-theme-del:hover {
+            background: #dc3545;
+            color: #ffffff;
+        }
+</style>
+
+<div class="dashboard-wrapper mt-4 container-fluid p-4">
+
+    <!-- ระบบแจ้งเตือนกรณี "ลบข้อมูลไม่ได้" -->
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm rounded-3 mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-octagon-fill fs-5 me-2"></i>
+                <div>
+                    <strong>เกิดข้อผิดพลาดจากฐานข้อมูล (ลบไม่สำเร็จ)</strong>
+                    <div class="small text-muted mt-1">@TempData["ErrorMessage"]</div>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="fw-bold fs-4 text-dark">
+            <i class="bi bi-people-fill text-primary me-2"></i> จัดการผู้ใช้งานระบบ
+        </div>
+        <a asp-action="Create" class="btn btn-primary btn-sm d-flex align-items-center fw-bold px-3 py-2 rounded-pill">
+            <i class="bi bi-person-plus-fill me-2"></i> เพิ่มผู้ใช้ใหม่
+        </a>
+    </div>
+
+    <!-- Table Section -->
+    <div class="table-container">
+        <div class="table-responsive">
+            <table class="table-user text-center mb-0">
+                <thead>
+                    <tr>
+                        <th>รหัส</th>
+                        <th class="text-start">ชื่อผู้ใช้ / Email</th>
+                        <th class="text-start">ชื่อ-นามสกุล</th>
+                        <th>แผนก</th>
+                        <th>เบอร์โทรศัพท์</th>
+                        <th>บทบาท (Role)</th>
+                        <th>จัดการ</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold text-muted">#@item.User_id</td>
+                            <td class="text-start">
+                                <div class="fw-bold text-dark">@item.Username</div>
+                                <small class="text-muted">@item.Em</small>
+                            </td>
+                            <td class="fw-bold text-start text-dark">
+                                @item.Title@item.Firstname @item.Lastname
+                            </td>
+                            <td>
+                                <span class="text-dark">@item.Departments?.Department_name</span>
+                            </td>
+                            <td class="fw-bold">@item.P_number</td>
+                            <td>
+                                @if (item.Role == "Admin")
+                                {
+                                    <span class="badge-role bg-admin">ADMIN</span>
+                                }
+                                else if (item.Role == "Pharmacist")
+                                {
+                                    <span class="badge-role bg-pharma">PHARMACIST</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-role bg-staff">STAFF</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="d-inline-flex gap-1">
+                                    <a asp-action="Edit" asp-route-id="@item.User_id"
+                                       class="btn btn-sm btn-theme-edit" title="แก้ไข">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+
+                                    <a asp-action="Delete" asp-route-id="@item.User_id"
+                                       class="btn btn-sm btn-theme-del"
+                                       onclick="return confirm('ยืนยันการลบผู้ใช้: @item.Title@item.Firstname @item.Lastname?')" title="ลบ">
+                                        <i class="bi bi-trash3-fill"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@* นำเข้า Bootstrap Icons *@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">

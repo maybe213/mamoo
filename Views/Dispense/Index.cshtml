@@ -1,0 +1,265 @@
+﻿@model IEnumerable<DrugInventoryPro.Models.Dispense>
+
+@{
+    ViewData["Title"] = "ทะเบียนประวัติการเบิกจ่ายยา";
+}
+
+<style>
+    /* 🌟 ตัวแปรธีม Medical UI/UX (Clean & Muted) */
+    :root {
+        --app-bg: #F4F5F7;
+        --card-bg: #FFFFFF;
+        --text-main: #333333;
+        --text-muted: #64748B;
+        --border-color: #E2E8F0;
+        --color-primary: #026AA7;
+        --color-primary-hover: #025383;
+        --color-primary-light: #F0F9FF;
+        --status-success-bg: #ECFDF5;
+        --status-success-text: #065F46;
+        --status-warning-bg: #FEF3C7;
+        --status-warning-text: #92400E;
+        --status-danger-bg: #FEF2F2;
+        --status-danger-text: #991B1B;
+    }
+
+    body {
+        background-color: var(--app-bg);
+        font-family: 'Sarabun', sans-serif;
+        color: var(--text-main);
+    }
+
+    /* Page Header */
+    .page-title {
+        color: var(--color-primary);
+        font-weight: 700;
+    }
+
+    /* Custom Buttons */
+    .btn-primary-main {
+        background-color: var(--color-primary);
+        color: #FFFFFF;
+        border: none;
+        padding: 10px 22px;
+        font-weight: 600;
+        border-radius: 50px;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+        .btn-primary-main:hover {
+            background-color: var(--color-primary-hover);
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(2, 106, 167, 0.2);
+        }
+
+    .btn-pharmacist-room {
+        color: var(--color-primary);
+        border: 1px solid var(--color-primary);
+        background-color: #FFFFFF;
+        padding: 10px 20px;
+        font-weight: 600;
+        border-radius: 50px;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+        .btn-pharmacist-room:hover {
+            background-color: var(--color-primary-light);
+            color: var(--color-primary-hover);
+        }
+
+    .btn-view-detail {
+        background-color: var(--color-primary-light);
+        color: var(--color-primary);
+        border: 1px solid #BAE6FD;
+        border-radius: 50px;
+        padding: 6px 16px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+        .btn-view-detail:hover {
+            background-color: var(--color-primary);
+            color: #FFFFFF;
+        }
+
+    /* Table Custom Styling */
+    .table-custom-card {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        background-color: var(--card-bg);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    .table-custom thead {
+        background-color: #F8F9FA;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .table-custom th {
+        color: var(--text-muted);
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+    }
+
+    /* Status Badges with Accessibility Standards */
+    .badge-status {
+        font-weight: 600;
+        font-size: 0.85rem;
+        padding: 6px 14px;
+        border-radius: 50px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .badge-pending {
+        background-color: var(--status-warning-bg);
+        color: var(--status-warning-text);
+        border: 1px solid #FDE68A;
+    }
+
+    .badge-approved {
+        background-color: var(--status-success-bg);
+        color: var(--status-success-text);
+        border: 1px solid #A7F3D0;
+    }
+
+    .badge-rejected {
+        background-color: var(--status-danger-bg);
+        color: var(--status-danger-text);
+        border: 1px solid #FECACA;
+    }
+
+    /* Soft Medical Alerts */
+    .alert-medical-success {
+        background-color: var(--status-success-bg);
+        color: var(--status-success-text);
+        border: 1px solid #A7F3D0;
+        border-radius: 8px;
+    }
+
+    .alert-medical-danger {
+        background-color: var(--status-danger-bg);
+        color: var(--status-danger-text);
+        border: 1px solid #FECACA;
+        border-radius: 8px;
+    }
+</style>
+
+<div class="container py-4">
+    <!-- Notifications -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-medical-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-medical-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Header Section -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h3 class="page-title mb-1"><i class="bi bi-journal-medical me-2"></i>ทะเบียนสถานะและประวัติการเบิกจ่ายยา</h3>
+            <p class="text-muted small mb-0">ทะเบียนแสดงเอกสารการขอเบิกจ่ายและสถานะการตัดยอดคลังสินค้า</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            @if (User.IsInRole("Pharmacist"))
+            {
+                <a href="/Dispense/Approve" class="btn-pharmacist-room shadow-sm">
+                    <i class="bi bi-check2-square me-2"></i> ห้องอนุมัติคำเบิก
+                </a>
+            }
+            <a asp-action="Create" class="btn-primary-main shadow-sm">
+                <i class="bi bi-plus-lg me-2"></i> บันทึกใบเบิกยาใหม่
+            </a>
+        </div>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="card table-custom-card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle table-custom">
+                <thead>
+                    <tr>
+                        <th class="ps-4 py-3" style="width: 25%;">เลขที่ใบเบิกยา</th>
+                        <th style="width: 25%;">วันที่-เวลาที่ยื่นคำขอ</th>
+                        <th class="text-center" style="width: 25%;">สถานะคำขอเบิก</th>
+                        <th class="text-end pe-4" style="width: 25%;">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-bold text-dark font-monospace">@item.Dispense_id</td>
+                                <td>
+                                    <i class="bi bi-calendar3 text-muted me-2"></i>
+                                    @(item.Dispense_date.HasValue? item.Dispense_date.Value.ToString("dd/MM/yyyy HH:mm") : "-")
+                                </td>
+                                <td class="text-center">
+                                    @if (item.Status == "Pending" || string.IsNullOrEmpty(item.Status))
+                                    {
+                                        <span class="badge-status badge-pending">
+                                            <i class="bi bi-hourglass-split"></i> รอพิจารณาอนุมัติ
+                                        </span>
+                                    }
+                                    else if (item.Status == "Approved")
+                                    {
+                                        <span class="badge-status badge-approved">
+                                            <i class="bi bi-check-circle-fill"></i> อนุมัติ / ตัดสต็อกแล้ว
+                                        </span>
+                                    }
+                                    else if (item.Status == "Rejected")
+                                    {
+                                        <span class="badge-status badge-rejected">
+                                            <i class="bi bi-x-circle-fill"></i> ปฏิเสธคำขอเบิก
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a asp-action="Details" asp-route-id="@item.Dispense_id" class="btn-view-detail shadow-sm">
+                                        <i class="bi bi-search me-1"></i> ดูรายละเอียดการเบิก
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted bg-light">
+                                <i class="bi bi-inbox text-muted d-block mb-2" style="font-size: 2.5rem;"></i>
+                                <span class="fw-semibold">ยังไม่มีประวัติการเบิกจ่ายยาในระบบ</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+}

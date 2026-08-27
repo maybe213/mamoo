@@ -1,0 +1,243 @@
+﻿@model DrugInventoryPro.Models.User
+
+@{
+    ViewData["Title"] = "เพิ่มผู้ใช้ใหม่";
+}
+
+<style>
+    :root {
+        --theme-primary: #0d6efd;
+        --theme-primary-hover: #0b5ed7;
+        --theme-dark: #212529;
+        --theme-light-bg: #f8f9fa;
+        --theme-hover-bg: #f1f8ff;
+        --theme-border: #dee2e6;
+    }
+
+    body {
+        background-color: var(--theme-light-bg);
+        font-family: 'Sarabun', sans-serif;
+    }
+
+    .container-custom {
+        max-width: 750px;
+        margin-top: 40px;
+        margin-bottom: 40px;
+    }
+
+    /* Card Styling */
+    .card-register {
+        background-color: #ffffff;
+        border: 1px solid var(--theme-border);
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .card-header-theme {
+        background-color: var(--theme-dark);
+        color: #ffffff;
+        padding: 18px;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    /* Form Inputs */
+    .form-label, .form-group-label {
+        font-weight: 600;
+        color: var(--theme-dark);
+        margin-bottom: 6px;
+    }
+
+    .form-control, .form-select {
+        border: 1px solid var(--theme-border);
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--theme-primary);
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+            outline: none;
+        }
+
+    /* Readonly Field Styling */
+    .form-control-readonly {
+        background-color: var(--theme-light-bg) !important;
+        border: 1px dashed #ced4da !important;
+        color: #6c757d !important;
+        cursor: not-allowed;
+        font-weight: bold;
+    }
+
+    /* Input Group Icon Styling */
+    .input-group-text {
+        background-color: var(--theme-hover-bg);
+        border-color: var(--theme-border);
+        color: var(--theme-primary);
+        width: 45px;
+        justify-content: center;
+    }
+
+    /* Action Buttons */
+    .btn-theme-primary {
+        background-color: var(--theme-primary);
+        color: #ffffff;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: bold;
+        transition: all 0.2s ease;
+    }
+
+        .btn-theme-primary:hover {
+            background-color: var(--theme-primary-hover);
+            color: #ffffff;
+        }
+
+    .btn-theme-secondary {
+        background-color: var(--theme-dark);
+        color: #ffffff;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: bold;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+        .btn-theme-secondary:hover {
+            background-color: #343a40;
+            color: #ffffff;
+        }
+</style>
+
+<div class="container container-custom">
+    <div class="card card-register">
+        <div class="card-header-theme">
+            <h4 class="m-0"><i class="bi bi-person-plus-fill me-2"></i>เพิ่มผู้ใช้งานใหม่</h4>
+        </div>
+        <div class="card-body p-4">
+            <form asp-action="Create" method="post">
+
+                <!-- 🆔 ส่วนแสดงรหัสผู้ใช้ล่าสุดจากฐานข้อมูล -->
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-hash"></i> รหัสผู้ใช้งานที่จะได้รับ</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-key-fill"></i></span>
+                        <input class="form-control form-control-readonly" value="@ViewBag.NextUserId" readonly tabindex="-1" />
+                    </div>
+                    <small class="text-muted">*ระบบตรวจสอบรหัสถัดไปให้โดยอัตโนมัติอ้างอิงจากฐานข้อมูลล่าสุด</small>
+                </div>
+
+                <hr class="my-4 text-muted">
+
+                <!-- 🔐 ส่วนที่ 1: ข้อมูลเข้าสู่ระบบและสิทธิ์ -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">ชื่อผู้ใช้งาน (Username)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person-circle"></i></span>
+                            <input asp-for="Username" class="form-control" placeholder="ภาษาอังกฤษ/ตัวเลข" required />
+                        </div>
+                        <span asp-validation-for="Username" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">รหัสผ่าน (Password)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                            <input type="password" asp-for="Password" class="form-control" placeholder="กำหนดรหัสผ่าน" required />
+                        </div>
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">ระดับสิทธิ์ (Role)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-shield-lock-fill"></i></span>
+                            <select asp-for="Role" class="form-select" required>
+                                <option value="" selected disabled>เลือกสิทธิ์...</option>
+                                <option value="Admin">Admin</option>
+                                <option value="Pharmacist">Pharmacist</option>
+                                <option value="Staff">Staff</option>
+                            </select>
+                        </div>
+                        <span asp-validation-for="Role" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <hr class="my-4 text-muted">
+
+                <!-- 👤 ส่วนที่ 2: ข้อมูลส่วนตัวและสังกัด -->
+                <div class="mb-3">
+                    <label class="form-label">ชื่อ-นามสกุลผู้สมัคร (ภาษาไทยเท่านั้น)</label>
+                    <div class="row g-2">
+                        <!-- คำนำหน้าชื่อ -->
+                        <div class="col-md-3">
+                            <select asp-for="Title" class="form-select" required>
+                                <option value="" selected disabled>คำนำหน้า...</option>
+                                <option value="นาย">นาย</option>
+                                <option value="นาง">นาง</option>
+                                <option value="นางสาว">นางสาว</option>
+                                <option value="ภก.">ภก.</option>
+                                <option value="ภญ.">ภญ.</option>
+                                <option value="นพ.">นพ.</option>
+                                <option value="พญ.">พญ.</option>
+                                <option value="ดร.">ดร.</option>
+                            </select>
+                        </div>
+                        <!-- ชื่อจริง -->
+                        <div class="col-md-4">
+                            <input asp-for="Firstname" class="form-control" placeholder="ชื่อจริง"
+                                   required pattern="^[ก-๙]+$" title="กรุณากรอกชื่อเป็นภาษาไทยเท่านั้น" />
+                        </div>
+                        <!-- นามสกุล -->
+                        <div class="col-md-5">
+                            <input asp-for="Lastname" class="form-control" placeholder="นามสกุล"
+                                   required pattern="^[ก-๙]+$" title="กรุณากรอกนามสกุลเป็นภาษาไทยเท่านั้น" />
+                        </div>
+                    </div>
+                    <span asp-validation-for="Firstname" class="text-danger small"></span>
+                    <span asp-validation-for="Lastname" class="text-danger small"></span>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <!-- 🏥 ส่วนเลือกแผนกที่สังกัด -->
+                    <div class="col-md-12">
+                        <label class="form-group-label"><i class="bi bi-hospital-fill me-1"></i> แผนกที่สังกัด</label>
+                        <select asp-for="Department_id" asp-items="ViewBag.Departments" class="form-select" required>
+                            <option value="" selected disabled>-- เลือกแผนก --</option>
+                        </select>
+                        <span asp-validation-for="Department_id" class="text-danger small"></span>
+                    </div>
+
+                    <!-- เบอร์โทรศัพท์ (P_number) -->
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="bi bi-telephone-fill me-1"></i> เบอร์โทรศัพท์</label>
+                        <input asp-for="P_number" class="form-control" required placeholder="เช่น 0812345678"
+                               pattern="^[0-9]{9,10}$" title="กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 9-10 หลัก" />
+                        <span asp-validation-for="P_number" class="text-danger small"></span>
+                    </div>
+
+                    <!-- อีเมล (Em) -->
+                    <div class="col-md-6">
+                        <label class="form-label"><i class="bi bi-envelope-at-fill me-1"></i> อีเมล</label>
+                        <input asp-for="Em" type="email" class="form-control" placeholder="example@email.com" />
+                        <span asp-validation-for="Em" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <!-- ปุ่มควบคุม -->
+                <div class="d-flex justify-content-between mt-4 border-top pt-3">
+                    <a asp-action="Index" class="btn btn-theme-secondary"><i class="bi bi-arrow-left me-1"></i> ยกเลิก</a>
+                    <button type="submit" class="btn btn-theme-primary shadow-sm"><i class="bi bi-person-check-fill me-1"></i> บันทึก</button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+@* นำเข้า Bootstrap Icons *@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">

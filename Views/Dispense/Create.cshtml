@@ -1,0 +1,677 @@
+﻿@model DrugInventoryPro.Models.Dispense
+
+@{
+    ViewData["Title"] = "สร้างคำขอเบิกยา / จ่ายยาออก";
+
+    var medList = (ViewBag.Medicines as List<DrugInventoryPro.Models.Medicines>) ?? new List<DrugInventoryPro.Models.Medicines>();
+    var supList = (ViewBag.Supplies as List<DrugInventoryPro.Models.Medicines>) ?? new List<DrugInventoryPro.Models.Medicines>();
+
+    // 🛠️ ชื่อหมวดหมู่แบบปลอดภัย (กันกรณีไม่ได้ผูกหมวดหมู่ไว้)
+    string CatName(DrugInventoryPro.Models.Medicines m)
+        => string.IsNullOrWhiteSpace(m.Category?.Category_name) ? "ไม่ระบุหมวดหมู่" : m.Category!.Category_name!;
+
+    // 🛠️ อ่านชื่อหน่วยนับอย่างปลอดภัย (ไม่ทราบชื่อ property ที่แน่นอนของ MedicineUnit จึงอ่านผ่าน reflection)
+    string UnitName(DrugInventoryPro.Models.Medicines m)
+    {
+        var unit = m.GetType().GetProperty("MedicineUnit")?.GetValue(m);
+        if (unit != null)
+        {
+            var name = unit.GetType().GetProperty("Unit_name")?.GetValue(unit)?.ToString()
+                    ?? unit.GetType().GetProperty("Name")?.GetValue(unit)?.ToString();
+            if (!string.IsNullOrWhiteSpace(name)) return name!;
+        }
+        return m.Unit_id?.ToString() ?? "-";
+    }
+
+    var medCategories = medList.Select(CatName).Distinct().OrderBy(c => c).ToList();
+    var supCategories = supList.Select(CatName).Distinct().OrderBy(c => c).ToList();
+
+    // 🛠️ จัดสถานะวันหมดอายุสำหรับ badge ตามหลัก FEFO (First Expired, First Out)
+    (string cssClass, string label, bool isExpired) ExpiryInfo(DrugInventoryPro.Models.Medicines m)
+    {
+        if (!m.Expired_at.HasValue)
+        {
+            return ("bg-light text-dark border", "ไม่ระบุวันหมดอายุ", false);
+        }
+
+        int daysLeft = (m.Expired_at.Value.Date - DateTime.Today).Days;
+
+        if (daysLeft < 0)
+            return ("badge-expired", "หมดอายุแล้ว", true);
+        if (daysLeft <= 90)
+            return ("badge-near-expiry", m.Expired_at.Value.ToString("dd/MM/yyyy"), false);
+        if (daysLeft <= 180)
+            return ("badge-warn-expiry", m.Expired_at.Value.ToString("dd/MM/yyyy"), false);
+
+        return ("bg-light text-dark border", m.Expired_at.Value.ToString("dd/MM/yyyy"), false);
+    }
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<style>
+    /* 🌟 ตัวแปรธีม Medical UI/UX (Clean & Muted) */
+    :root {
+        --app-bg: #F4F5F7;
+        --card-bg: #FFFFFF;
+        --text-main: #333333;
+        --text-muted: #5A6268;
+        --border-color: #E2E8F0;
+        --color-primary: #026AA7;
+        --color-primary-hover: #025383;
+        --color-primary-light: #F0F9FF;
+        --color-danger: #DC2626;
+        --color-danger-bg: #FEF2F2;
+        --color-supply: #0E7490;
+        --color-supply-bg: #ECFEFF;
+    }
+
+    body {
+        background-color: var(--app-bg);
+        font-family: 'Sarabun', sans-serif;
+        color: var(--text-main);
+    }
+
+    /* Page Header */
+    .page-header-title {
+        color: var(--color-primary);
+        border-left: 5px solid var(--color-primary);
+        padding-left: 15px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .btn-back-outline {
+        color: var(--text-muted);
+        border: 1px solid #CBD5E1;
+        background-color: #FFFFFF;
+        padding: 8px 20px;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+        .btn-back-outline:hover {
+            background-color: #F1F5F9;
+            color: var(--text-main);
+        }
+
+    /* Card Custom Styling */
+    .card-custom {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        background-color: var(--card-bg);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    /* Inputs & Selects */
+    .form-control-medical, .form-select-medical {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 10px 14px;
+        color: var(--text-main);
+    }
+
+        .form-control-medical:focus, .form-select-medical:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(2, 106, 167, 0.15);
+        }
+
+    /* Table & Container Scroll */
+    .table-container-scroll {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background-color: #FFFFFF;
+    }
+
+    .table-medical thead {
+        background-color: #F8F9FA;
+        border-bottom: 2px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .table-medical th {
+        color: var(--text-muted);
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        padding: 12px;
+    }
+
+    /* Tabs: ยา / เวชภัณฑ์ */
+    .nav-tabs-medical {
+        border-bottom: 2px solid var(--border-color);
+    }
+
+        .nav-tabs-medical .nav-link {
+            color: var(--text-muted);
+            font-weight: 700;
+            border: none;
+            border-bottom: 3px solid transparent;
+            border-radius: 0;
+            padding: 10px 6px;
+        }
+
+        .nav-tabs-medical .nav-link.active {
+            color: var(--color-primary);
+            background-color: transparent;
+            border-bottom: 3px solid var(--color-primary);
+        }
+
+    /* Category badges */
+    .badge-cat {
+        font-weight: 500;
+        background-color: #F1F5F9;
+        color: var(--text-muted);
+        border: 1px solid var(--border-color);
+    }
+
+    .badge-type-med {
+        background-color: var(--color-primary-light);
+        color: var(--color-primary);
+        border: 1px solid #BAE6FD;
+    }
+
+    .badge-type-sup {
+        background-color: var(--color-supply-bg);
+        color: var(--color-supply);
+        border: 1px solid #A5F3FC;
+    }
+
+    .badge-low-stock {
+        background-color: var(--color-danger-bg);
+        color: var(--color-danger);
+        border: 1px solid #FECACA;
+    }
+
+    /* FEFO: ป้ายแสดงสถานะวันหมดอายุ */
+    .badge-expired {
+        background-color: #FEE2E2;
+        color: #991B1B;
+        border: 1px solid #FCA5A5;
+        font-weight: 700;
+    }
+
+    .badge-near-expiry {
+        background-color: #FFEDD5;
+        color: #9A3412;
+        border: 1px solid #FED7AA;
+        font-weight: 700;
+    }
+
+    .badge-warn-expiry {
+        background-color: #FEF9C3;
+        color: #854D0E;
+        border: 1px solid #FDE68A;
+    }
+
+    .fefo-note {
+        background-color: var(--color-primary-light);
+        border: 1px solid #BAE6FD;
+        color: var(--color-primary);
+        border-radius: 8px;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+    }
+
+    /* Action Buttons */
+    .btn-add-item {
+        background-color: var(--color-primary-light);
+        color: var(--color-primary);
+        border: 1px solid #BAE6FD;
+        border-radius: 6px;
+        font-weight: 600;
+        padding: 4px 10px;
+        transition: all 0.2s;
+    }
+
+        .btn-add-item:hover {
+            background-color: var(--color-primary);
+            color: #FFFFFF;
+        }
+
+    .btn-primary-submit {
+        background-color: var(--color-primary);
+        color: #FFFFFF;
+        border: none;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 12px;
+        transition: all 0.2s;
+    }
+
+        .btn-primary-submit:hover:not(:disabled) {
+            background-color: var(--color-primary-hover);
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(2, 106, 167, 0.25);
+        }
+
+        .btn-primary-submit:disabled {
+            background-color: #CBD5E1;
+            border-color: #CBD5E1;
+            color: #64748B;
+        }
+
+    .cart-total-row td {
+        background-color: #F8F9FA;
+        border-top: 2px solid var(--border-color);
+    }
+</style>
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="page-header-title"><i class="bi bi-box-arrow-up me-2"></i> สร้างคำขอเบิกยา / จ่ายยาออก</h3>
+        <a asp-action="Index" class="btn-back-outline shadow-sm"><i class="bi bi-arrow-left me-1"></i> กลับหน้าหลัก</a>
+    </div>
+
+    <div class="card card-custom p-4">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="row mb-4 g-3">
+                <div class="col-md-4">
+                    <label class="fw-bold form-label text-muted">เลขที่ใบเบิกยา (Dispense ID):</label>
+                    <input type="text" name="Dispense_id" value="@ViewBag.NewId" class="form-control form-control-medical fw-bold bg-light" readonly />
+                </div>
+                <div class="col-md-8">
+                    <label class="fw-bold form-label text-primary"><i class="bi bi-building me-1"></i> แผนกที่ยื่นขอเบิกยา (Department):</label>
+                    <select name="Department_id" class="form-select form-select-medical fw-semibold" required>
+                        <option value="">-- กรุณาเลือกแผนกผู้ขอเบิก --</option>
+                        @if (ViewBag.DepartmentList != null)
+                        {
+                            foreach (var dept in ViewBag.DepartmentList)
+                            {
+                                <option value="@dept.Department_id">@dept.Department_id - @dept.Department_name</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <hr style="border-color: var(--border-color);" class="my-4">
+
+            <div class="row g-4">
+                <!-- ฝั่งซ้าย: ค้นหาและเลือกรายการยา / เวชภัณฑ์ -->
+                <div class="col-md-7">
+                    <h5 class="fw-bold mb-2 text-secondary"><i class="bi bi-search me-1"></i> เลือกรายการจากคลังสินค้า</h5>
+                    <div class="fefo-note mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        ระบบจัดเรียงรายการตามหลัก <strong>FEFO (First Expired, First Out)</strong> —
+                        ยา/เวชภัณฑ์ที่ใกล้วันหมดอายุที่สุดจะแสดงไว้บนสุดโดยอัตโนมัติ เพื่อให้เบิกจ่ายล็อตเก่าก่อนเสมอ
+                    </div>
+
+                    <!-- แท็บแยก ยา / เวชภัณฑ์ -->
+                    <ul class="nav nav-tabs nav-tabs-medical nav-fill mb-3" id="itemTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tab-med-btn" data-bs-toggle="tab" data-bs-target="#tab-med" type="button" role="tab" aria-controls="tab-med" aria-selected="true">
+                                <i class="bi bi-capsule me-1"></i> ยา <span class="badge bg-primary ms-1">@medList.Count</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-sup-btn" data-bs-toggle="tab" data-bs-target="#tab-sup" type="button" role="tab" aria-controls="tab-sup" aria-selected="false">
+                                <i class="bi bi-bandaid me-1"></i> เวชภัณฑ์ <span class="badge bg-info ms-1">@supList.Count</span>
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="itemTabsContent">
+
+                        <!-- ===== แท็บ: ยา ===== -->
+                        <div class="tab-pane fade show active" id="tab-med" role="tabpanel" aria-labelledby="tab-med-btn">
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <input type="text" class="form-control form-control-medical search-input"
+                                           data-target="#tab-med tbody" placeholder="🔍 พิมพ์เพื่อค้นหาชื่อยา..." />
+                                </div>
+                                <div class="col-3">
+                                    <select class="form-select form-select-medical category-filter" data-target="#tab-med tbody">
+                                        <option value="">ทุกหมวดหมู่</option>
+                                        @foreach (var c in medCategories)
+                                        {
+                                            <option value="@c">@c</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-3">
+                                    <select class="form-select form-select-medical sort-select" data-target="#tab-med tbody">
+                                        <option value="fefo" selected>เรียง:FEFO</option>
+                                        <option value="name">เรียง: ชื่อ (ก-ฮ)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="table-container-scroll shadow-sm">
+                                <table class="table table-hover align-middle table-medical mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>ชื่อยา / หมวดหมู่</th>
+                                            <th class="text-center" style="width: 120px;">วันหมดอายุ</th>
+                                            <th class="text-end" style="width: 100px;">ราคา/หน่วย</th>
+                                            <th class="text-center" style="width: 80px;">คงเหลือ</th>
+                                            <th class="text-center" style="width: 55px;">เพิ่ม</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (medList.Count > 0)
+                                        {
+                                            foreach (var med in medList)
+                                            {
+                                                string cat = CatName(med);
+                                                string unit = UnitName(med);
+                                                bool lowStock = (med.Stock ?? 0) <= (med.SafetyStock ?? 0);
+                                                var (expClass, expLabel, isExpired) = ExpiryInfo(med);
+                                                string expiryIso = med.Expired_at?.ToString("yyyy-MM-dd") ?? "";
+                                                <tr class="item-row" data-name="@med.Medicine_name" data-category="@cat" data-expiry="@expiryIso">
+                                                    <td>
+                                                        <span class="fw-semibold text-dark d-block">@med.Medicine_name</span>
+                                                        <span class="badge badge-cat small mt-1"><i class="bi bi-tag me-1"></i>@cat</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge @expClass px-2 py-1">@expLabel</span>
+                                                    </td>
+                                                    <td class="text-end fw-semibold text-primary">@med.Price.ToString("N2")</td>
+                                                    <td class="text-center">
+                                                        <span class="badge @(lowStock ? "badge-low-stock" : "bg-light text-dark border") px-2 py-1">
+                                                            @med.Stock @unit
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (isExpired)
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="ยาหมดอายุแล้ว ไม่สามารถเบิกได้">
+                                                                <i class="bi bi-x-lg"></i>
+                                                            </button>
+                                                        }
+                                                        else
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-add-item add-btn"
+                                                                    data-id="@med.Medicine_id" data-name="@med.Medicine_name"
+                                                                    data-stock="@(med.Stock ?? 0)" data-unit="@unit"
+                                                                    data-price="@med.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                                                    data-type="ยา" data-expiry="@expiryIso" data-expirylabel="@expLabel">
+                                                                <i class="bi bi-plus-lg"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr><td colspan="5" class="text-center text-muted py-4">ไม่มีรายการยาในคลัง</td></tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- ===== แท็บ: เวชภัณฑ์ ===== -->
+                        <div class="tab-pane fade" id="tab-sup" role="tabpanel" aria-labelledby="tab-sup-btn">
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <input type="text" class="form-control form-control-medical search-input"
+                                           data-target="#tab-sup tbody" placeholder="🔍 พิมพ์เพื่อค้นหาชื่อเวชภัณฑ์..." />
+                                </div>
+                                <div class="col-3">
+                                    <select class="form-select form-select-medical category-filter" data-target="#tab-sup tbody">
+                                        <option value="">ทุกหมวดหมู่</option>
+                                        @foreach (var c in supCategories)
+                                        {
+                                            <option value="@c">@c</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-3">
+                                    <select class="form-select form-select-medical sort-select" data-target="#tab-sup tbody">
+                                        <option value="fefo" selected>เรียง:FEFO</option>
+                                        <option value="name">เรียง: ชื่อ (ก-ฮ)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="table-container-scroll shadow-sm">
+                                <table class="table table-hover align-middle table-medical mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>ชื่อเวชภัณฑ์ / หมวดหมู่</th>
+                                            <th class="text-center" style="width: 120px;">วันหมดอายุ</th>
+                                            <th class="text-end" style="width: 100px;">ราคา/หน่วย</th>
+                                            <th class="text-center" style="width: 80px;">คงเหลือ</th>
+                                            <th class="text-center" style="width: 55px;">เพิ่ม</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (supList.Count > 0)
+                                        {
+                                            foreach (var sup in supList)
+                                            {
+                                                string cat = CatName(sup);
+                                                string unit = UnitName(sup);
+                                                bool lowStock = (sup.Stock ?? 0) <= (sup.SafetyStock ?? 0);
+                                                var (expClass, expLabel, isExpired) = ExpiryInfo(sup);
+                                                string expiryIso = sup.Expired_at?.ToString("yyyy-MM-dd") ?? "";
+                                                <tr class="item-row" data-name="@sup.Medicine_name" data-category="@cat" data-expiry="@expiryIso">
+                                                    <td>
+                                                        <span class="fw-semibold text-dark d-block">@sup.Medicine_name</span>
+                                                        <span class="badge badge-cat small mt-1"><i class="bi bi-tag me-1"></i>@cat</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge @expClass px-2 py-1">@expLabel</span>
+                                                    </td>
+                                                    <td class="text-end fw-semibold text-primary">@sup.Price.ToString("N2")</td>
+                                                    <td class="text-center">
+                                                        <span class="badge @(lowStock ? "badge-low-stock" : "bg-light text-dark border") px-2 py-1">
+                                                            @sup.Stock @unit
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (isExpired)
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="เวชภัณฑ์หมดอายุแล้ว ไม่สามารถเบิกได้">
+                                                                <i class="bi bi-x-lg"></i>
+                                                            </button>
+                                                        }
+                                                        else
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-add-item add-btn"
+                                                                    data-id="@sup.Medicine_id" data-name="@sup.Medicine_name"
+                                                                    data-stock="@(sup.Stock ?? 0)" data-unit="@unit"
+                                                                    data-price="@sup.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                                                    data-type="เวชภัณฑ์" data-expiry="@expiryIso" data-expirylabel="@expLabel">
+                                                                <i class="bi bi-plus-lg"></i>
+                                                            </button>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr><td colspan="5" class="text-center text-muted py-4">ไม่มีรายการเวชภัณฑ์ในคลัง</td></tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ฝั่งขวา: รายการที่เลือกเบิก -->
+                <div class="col-md-5">
+                    <h5 class="fw-bold mb-3 text-primary"><i class="bi bi-cart-check me-1"></i> รายการที่เลือกเบิก</h5>
+                    <div class="table-container-scroll shadow-sm" style="max-height: 345px;">
+                        <table class="table table-hover align-middle table-medical mb-0">
+                            <thead>
+                                <tr>
+                                    <th>รายการ</th>
+                                    <th class="text-center" style="width: 90px;">จำนวน</th>
+                                    <th class="text-end" style="width: 100px;">รวม (บาท)</th>
+                                    <th class="text-center" style="width: 50px;">ลบ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dispense-item-list">
+                                <tr class="empty-row"><td colspan="4" class="text-center text-muted py-5">ยังไม่มีรายการที่เลือก</td></tr>
+                            </tbody>
+                            <tfoot id="cart-footer" style="display: none;">
+                                <tr class="cart-total-row fw-bold">
+                                    <td colspan="2" class="text-end">ยอดรวมสุทธิ</td>
+                                    <td class="text-end text-primary" id="grandTotalDisplay">0.00</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" id="btnSaveDispense" class="btn btn-primary-submit w-100 shadow-sm" disabled>
+                            <i class="bi bi-send-check-fill me-1"></i> ส่งคำขออนุมัติเบิกยา
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ===== ค้นหา + กรองตามหมวดหมู่ (ใช้ร่วมกันทั้งแท็บยาและเวชภัณฑ์) =====
+        function applyFilters(tbodySelector) {
+            let searchVal = ($(`.search-input[data-target="${tbodySelector}"]`).val() || '').toString().toLowerCase();
+            let catVal = $(`.category-filter[data-target="${tbodySelector}"]`).val() || '';
+
+            $(`${tbodySelector} tr.item-row`).each(function () {
+                let name = ($(this).data('name') || '').toString().toLowerCase();
+                let category = ($(this).data('category') || '').toString();
+                let matchSearch = name.indexOf(searchVal) > -1;
+                let matchCat = (catVal === '' || category === catVal);
+                $(this).toggle(matchSearch && matchCat);
+            });
+        }
+
+        $('.search-input').on('keyup', function () { applyFilters($(this).data('target')); });
+        $('.category-filter').on('change', function () { applyFilters($(this).data('target')); });
+
+        // ===== เรียงลำดับ: FEFO (วันหมดอายุใกล้สุดก่อน) หรือ ชื่อ (ก-ฮ) =====
+        function sortRows(tbodySelector, mode) {
+            let $tbody = $(tbodySelector);
+            let rows = $tbody.find('tr.item-row').get();
+
+            rows.sort(function (a, b) {
+                if (mode === 'name') {
+                    let nameA = ($(a).data('name') || '').toString();
+                    let nameB = ($(b).data('name') || '').toString();
+                    return nameA.localeCompare(nameB, 'th');
+                }
+                // FEFO: ไม่มีวันหมดอายุ ให้ไปอยู่ท้ายสุด
+                let expA = $(a).data('expiry');
+                let expB = $(b).data('expiry');
+                let dateA = expA ? new Date(expA) : new Date('9999-12-31');
+                let dateB = expB ? new Date(expB) : new Date('9999-12-31');
+                return dateA - dateB;
+            });
+
+            $.each(rows, function (i, row) { $tbody.append(row); });
+        }
+
+        $('.sort-select').on('change', function () {
+            sortRows($(this).data('target'), $(this).val());
+        });
+
+        // ===== เพิ่มรายการเข้าตะกร้าฝั่งขวา =====
+        $(document).on('click', '.add-btn', function () {
+            let $btn = $(this);
+            addItem(
+                $btn.data('id'),
+                $btn.data('name'),
+                parseInt($btn.data('stock'), 10) || 0,
+                $btn.data('unit'),
+                parseFloat($btn.data('price')) || 0,
+                $btn.data('type'),
+                $btn.data('expiry'),
+                $btn.data('expirylabel')
+            );
+        });
+
+        function addItem(id, name, stock, unit, price, type, expiryIso, expiryLabel) {
+            if (stock <= 0) { alert("รายการนี้หมดคลังชั่วคราว ไม่สามารถเบิกได้ครับ"); return; }
+            if (expiryIso && new Date(expiryIso) < new Date(new Date().toDateString())) {
+                alert("รายการนี้หมดอายุแล้ว ไม่สามารถเบิกได้ครับ (นโยบาย FEFO)"); return;
+            }
+            if ($(`#row-${id}`).length > 0) { alert("รายการนี้ถูกเพิ่มไปในตะกร้าแล้วครับ"); return; }
+
+            $('.empty-row').hide();
+            $('#cart-footer').show();
+
+            let typeBadge = (type === 'เวชภัณฑ์')
+                ? '<span class="badge badge-type-sup small">เวชภัณฑ์</span>'
+                : '<span class="badge badge-type-med small">ยา</span>';
+
+            let expiryLine = expiryLabel
+                ? `<span class="small text-muted d-block"><i class="bi bi-calendar-event me-1"></i>หมดอายุ: ${expiryLabel}</span>`
+                : '';
+
+            let html = `
+                <tr id="row-${id}" data-price="${price}">
+                    <td class="small">
+                        <span class="fw-semibold text-dark d-block">${name}</span>
+                        ${typeBadge}
+                        ${expiryLine}
+                        <input type="hidden" name="MedicineIds" value="${id}">
+                    </td>
+                    <td>
+                        <input type="number" name="DispenseQuantities" class="form-control form-control-sm text-center fw-bold form-control-medical row-qty"
+                               value="1" min="1" max="${stock}" required>
+                    </td>
+                    <td class="text-end fw-semibold row-total">${price.toFixed(2)}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0 remove-row">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+
+            $('#dispense-item-list').append(html);
+            $('#btnSaveDispense').prop('disabled', false);
+            updateGrandTotal();
+        }
+
+        // ===== ลบรายการออกจากตะกร้า =====
+        $(document).on('click', '.remove-row', function () {
+            $(this).closest('tr').remove();
+            checkEmpty();
+            updateGrandTotal();
+        });
+
+        // ===== อัปเดตยอดรวมรายแถวเมื่อแก้จำนวน =====
+        $(document).on('input', '.row-qty', function () {
+            let $row = $(this).closest('tr');
+            let price = parseFloat($row.data('price')) || 0;
+            let qty = parseFloat($(this).val()) || 0;
+            $row.find('.row-total').text((price * qty).toFixed(2));
+            updateGrandTotal();
+        });
+
+        function updateGrandTotal() {
+            let total = 0;
+            $('#dispense-item-list tr:not(.empty-row)').each(function () {
+                total += parseFloat($(this).find('.row-total').text()) || 0;
+            });
+            $('#grandTotalDisplay').text(total.toFixed(2));
+        }
+
+        function checkEmpty() {
+            if ($('#dispense-item-list tr:not(.empty-row)').length === 0) {
+                $('.empty-row').show();
+                $('#cart-footer').hide();
+                $('#btnSaveDispense').prop('disabled', true);
+            }
+        }
+    </script>
+}

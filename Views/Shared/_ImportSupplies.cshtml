@@ -1,0 +1,39 @@
+﻿@* ไฟล์: Views/Receive/_ImportSupplies.cshtml *@
+
+<div class="modal fade" id="importSuppliesModal" tabindex="-1" aria-labelledby="importSuppliesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="Receive" asp-action="PreviewExcel" method="post" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+
+                <!-- กำหนดประเภทเป็น SUP สำหรับนำเข้าเวชภัณฑ์/อุปกรณ์ -->
+                <input type="hidden" name="importType" value="SUP" />
+
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="importSuppliesModalLabel">
+                        <i class="bi bi-file-earmark-excel"></i> นำเข้าข้อมูลเวชภัณฑ์/อุปกรณ์ (SUP) ด้วย Excel
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold">เลขที่ใบส่งของ / Invoice No.</label>
+                        <input type="text" name="invoiceNo" class="form-control" placeholder="ระบุเลขที่บิล/ใบส่งของ" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold">ผู้บันทึก / ผู้รับมอบ</label>
+                        <input type="text" name="receivedBy" class="form-control" placeholder="ระบุชื่อผู้รับเข้า" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label font-weight-bold">เลือกไฟล์ Excel (.xlsx)</label>
+                        <input type="file" name="excelFile" class="form-control" accept=".xlsx" required />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-success">ตรวจสอบไฟล์</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,184 @@
+﻿@model IEnumerable<DrugInventoryPro.Models.DiseaseReportViewModel>
+@{
+    ViewData["Title"] = "รายงานแนวโน้มโรคประจำเดือน";
+}
+
+<style>
+    /* 🌟 ตัวแปรธีม Medical UI/UX (Clean & Muted) */
+    :root {
+        --app-bg: #F4F5F7;
+        --card-bg: #FFFFFF;
+        --text-main: #333333;
+        --text-muted: #64748B;
+        --border-color: #E2E8F0;
+        --color-primary: #026AA7;
+        --color-primary-light: #F0F9FF;
+        --color-risk-bg: #FEF2F2;
+        --color-risk-border: #FCA5A5;
+        --color-risk-accent: #EF4444;
+        --color-risk-text: #991B1B;
+    }
+
+    body {
+        background-color: var(--app-bg);
+        font-family: 'Sarabun', sans-serif;
+        color: var(--text-main);
+    }
+
+    /* Page Header */
+    .page-title {
+        color: var(--color-primary);
+        font-weight: 700;
+    }
+
+    /* Risk Banner Card */
+    .card-risk-banner {
+        background-color: var(--color-risk-bg);
+        border: 1px solid var(--color-risk-border);
+        border-left: 5px solid var(--color-risk-accent) !important;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.05);
+    }
+
+    .badge-risk-top {
+        background-color: #FEE2E2;
+        color: var(--color-risk-text);
+        border: 1px solid #FCA5A5;
+        padding: 6px 16px;
+        border-radius: 50px;
+        font-weight: 700;
+    }
+
+    /* Table Custom Card */
+    .table-custom-card {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        background-color: var(--card-bg);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    .table-custom thead {
+        background-color: #F8F9FA;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .table-custom th {
+        color: var(--text-muted);
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        padding: 14px 16px;
+    }
+
+    /* Row Highlight for Top Risk */
+    .row-top-risk {
+        background-color: #FFF5F5 !important;
+    }
+
+    .badge-category {
+        background-color: #F1F5F9;
+        color: #475569;
+        border: 1px solid var(--border-color);
+        font-weight: 500;
+        border-radius: 50px;
+        padding: 4px 12px;
+    }
+</style>
+
+<div class="container py-4">
+    <!-- Header Title -->
+    <div class="d-flex align-items-center mb-4">
+        <h3 class="page-title mb-0">
+            <i class="bi bi-activity me-2"></i>รายงานแนวโน้มโรคประจำเดือน
+        </h3>
+    </div>
+
+    <!-- Top Risk Alert Banner -->
+    <div class="card card-risk-banner mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-2">
+                <div class="bg-white p-2 rounded-circle text-danger shadow-sm d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                    <i class="bi bi-shield-exclamation fs-4"></i>
+                </div>
+                <div>
+                    <h5 class="card-title fw-bold text-dark mb-0">ผลการประเมินกลุ่มโรคเสี่ยงสูงสุด</h5>
+                    <small class="text-muted">วิเคราะห์จากอัตราความหนาแน่นและปริมาณการจ่ายยาสู่ผู้ป่วยในรอบเดือนนี้</small>
+                </div>
+            </div>
+
+            <div class="row align-items-center mt-3">
+                <div class="col-md-7">
+                    <p class="fs-5 mb-1 text-secondary">
+                        เดือนนี้ผู้ป่วยเสี่ยงเป็น
+                        <span class="badge-risk-top fs-6 ms-1">
+                            <i class="bi bi-fire text-danger me-1"></i>โรค@ViewBag.TopRiskDisease
+                        </span>
+                        มากที่สุด
+                    </p>
+                    <p class="text-muted small mb-0">* คำนวณจากปริมาณตัวยาที่จ่ายออกเพื่อควบคุมและรักษาอาการของกลุ่มโรคดังกล่าว</p>
+                </div>
+                <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                    <div class="display-6 fw-bold text-danger font-monospace">
+                        @ViewBag.TopRiskQuantity.ToString("N0")
+                        <span class="fs-6 text-muted font-sans-serif">หน่วยจ่าย</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="card table-custom-card border-0 mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 table-custom">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 30%;">โรคที่เกี่ยวข้อง</th>
+                        <th style="width: 25%;">ชื่อหมวดหมู่ยา</th>
+                        <th class="text-center" style="width: 20%;">จำนวนตัวยาในระบบ (รายการ)</th>
+                        <th class="text-end pe-4" style="width: 25%;">ปริมาณยาที่ใช้ไปในเดือนนี้ (หน่วย)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            bool isTopRisk = item.DiseaseName == ViewBag.TopRiskDisease;
+                            <tr class="@(isTopRisk ? "row-top-risk fw-bold" : "")">
+                                <td class="ps-4">
+                                    @if (isTopRisk)
+                                    {
+                                        <i class="bi bi-exclamation-circle-fill text-danger me-1"></i>
+                                    }
+                                    <span class="@(isTopRisk ? "text-danger" : "text-dark")">@item.DiseaseName</span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-category">@item.CategoryName</span>
+                                </td>
+                                <td class="text-center font-monospace">@item.MedicineCount</td>
+                                <td class="text-end pe-4 fw-bold @(isTopRisk ? "text-danger" : "text-primary") font-monospace">
+                                    @item.TotalQuantityUsed.ToString("N0")
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted bg-light">
+                                <i class="bi bi-inbox text-muted d-block mb-2" style="font-size: 2.5rem;"></i>
+                                <span>ไม่พบข้อมูลการจ่ายยาและเวชภัณฑ์ในรอบเดือนนี้</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+}

@@ -1,0 +1,70 @@
+﻿using DrugInventoryPro.Data;
+using Microsoft.AspNetCore.Http.Features; // 👈 1. เพิ่ม Namespace สำหรับ FormOptions
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Services
+builder.Services.AddControllersWithViews();
+
+// 🛠️ 2. เพิ่มส่วนขยายขีดจำกัดการรับค่า Form (แก้ไขปัญหา HTTP ERROR 400)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.ValueCountLimit = 10000;           // ขยายจำนวน Keys/Inputs สูงสุดเป็น 10,000 ตัว (ค่าเดิมคือ 1,024)
+    options.ValueLengthLimit = int.MaxValue;   // ขยายความยาวของข้อมูลในแต่ละช่อง
+    options.MultipartBodyLengthLimit = int.MaxValue; // รองรับขนาด Body ของ Form
+});
+
+builder.Services.AddDbContext<DrugInventoryContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions =>
+        {
+            sqlOptions.MigrationsAssembly("DrugInventoryPro");
+
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(30),
+                errorNumbersToAdd: null
+            );
+        }
+    )
+);
+
+// Session
+builder.Services.AddDistributedMemoryCache();
+
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+// สำคัญ
+builder.Services.AddHttpContextAccessor();
+
+var app = builder.Build();
+
+// Pipeline
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseSession();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Account}/{action=Login}/{id?}");
+
+app.Run();

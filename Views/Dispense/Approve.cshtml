@@ -1,0 +1,305 @@
+﻿@model IEnumerable<DrugInventoryPro.Models.Dispense>
+
+@{
+    ViewData["Title"] = "พิจารณาอนุมัติคำขอเบิกยา";
+}
+
+<style>
+    /* 🌟 ตัวแปรธีม Medical UI/UX (Clean & Muted) */
+    :root {
+        --app-bg: #F4F5F7;
+        --card-bg: #FFFFFF;
+        --text-main: #333333;
+        --text-muted: #5A6268;
+        --border-color: #E2E8F0;
+        --color-primary: #026AA7;
+        --color-primary-hover: #025383;
+        --color-primary-bg: #F0F9FF;
+        --color-danger: #DC2626;
+        --color-danger-hover: #B91C1C;
+        --color-danger-bg: #FEF2F2;
+        --color-danger-border: #FECACA;
+    }
+
+    body {
+        background-color: var(--app-bg);
+        font-family: 'Sarabun', sans-serif;
+        color: var(--text-main);
+    }
+
+    /* Page Header */
+    .page-header-title {
+        color: var(--color-primary);
+        border-left: 5px solid var(--color-primary);
+        padding-left: 15px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .btn-back-outline {
+        color: var(--text-muted);
+        border: 1px solid #CBD5E1;
+        background-color: #FFFFFF;
+        padding: 8px 20px;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+        .btn-back-outline:hover {
+            background-color: #F1F5F9;
+            color: var(--text-main);
+        }
+
+    /* Card Approve Styling */
+    .card-approve {
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        background-color: var(--card-bg);
+    }
+
+    .card-header-clean {
+        background-color: #F8F9FA;
+        color: var(--text-main);
+        padding: 16px 20px;
+        font-weight: 700;
+        border-bottom: 1px solid var(--border-color);
+        border-top: 4px solid var(--color-primary);
+    }
+
+    .badge-date-tag {
+        background-color: #F1F5F9;
+        color: var(--text-muted);
+        border: 1px solid var(--border-color);
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    /* Table Approve Styling */
+    .table-approve thead {
+        background-color: #F8F9FA;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .table-approve th {
+        color: var(--text-muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        padding: 12px 16px;
+    }
+
+    .table-approve td {
+        padding: 14px 16px;
+        color: var(--text-main);
+    }
+
+    .row-total-style {
+        background-color: #F8FAFC;
+        color: var(--text-main);
+        font-weight: 700;
+        border-top: 2px solid var(--border-color);
+    }
+
+    /* Button Styling */
+    .btn-approve {
+        background-color: var(--color-primary);
+        color: #FFFFFF;
+        border: none;
+        padding: 10px 28px;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+        .btn-approve:hover {
+            background-color: var(--color-primary-hover);
+            color: #FFFFFF;
+            box-shadow: 0 4px 8px rgba(2, 106, 167, 0.2);
+        }
+
+    .btn-reject-outline {
+        color: var(--color-danger);
+        border: 1px solid var(--color-danger-border);
+        background-color: var(--color-danger-bg);
+        padding: 10px 20px;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+        .btn-reject-outline:hover {
+            background-color: var(--color-danger);
+            color: #FFFFFF;
+        }
+
+    .btn-remove-item {
+        color: var(--color-danger);
+        border: 1px solid var(--color-danger-border);
+        background-color: var(--color-danger-bg);
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 6px 12px;
+        transition: all 0.2s;
+    }
+
+        .btn-remove-item:hover {
+            background-color: var(--color-danger);
+            color: #FFFFFF;
+        }
+</style>
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="page-header-title"><i class="bi bi-check2-all me-2"></i> พิจารณาอนุมัติคำขอเบิกยา</h3>
+        <a asp-action="Index" class="btn-back-outline shadow-sm"><i class="bi bi-arrow-left me-1"></i> กลับหน้าประวัติ</a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert" style="border-radius: 12px; border-left: 5px solid #059669; background-color: #ECFDF5; color: #065F46;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm mb-4" role="alert" style="border-radius: 12px; border-left: 5px solid #DC2626; background-color: #FEF2F2; color: #991B1B;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="card p-5 text-center shadow-sm border-0" style="border-radius: 12px; background-color: #FFFFFF;">
+            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+            <p class="mt-3 text-muted fw-bold mb-0">ไม่มีรายการคำขอเบิกยาที่รอการอนุมัติในขณะนี้</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var item in Model)
+        {
+            <div class="card card-approve shadow-sm mb-4" id="card-@item.Dispense_id">
+                <div class="card-header-clean d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-file-earmark-text me-2 text-primary"></i> <strong>เลขที่ใบเบิก:</strong> @item.Dispense_id &nbsp;|&nbsp; <strong>ผู้เบิก:</strong> แผนก @item.Department_id</span>
+                    <span class="badge badge-date-tag px-3 py-2"><i class="bi bi-clock me-1"></i> @(item.Dispense_date?.ToString("dd/MM/yyyy HH:mm") ?? "-")</span>
+                </div>
+                <div class="card-body p-4">
+
+                    <form asp-action="ConfirmApprove" method="post" id="form-approve-@item.Dispense_id">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="dispenseId" value="@item.Dispense_id" />
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle table-approve mb-0" id="table-@item.Dispense_id">
+                                <thead>
+                                    <tr>
+                                        <th>ชื่อยา</th>
+                                        <th class="text-center">จำนวนที่ขอเบิก</th>
+                                        <th class="text-end">ราคา/หน่วย</th>
+                                        <th class="text-end">ราคารวม</th>
+                                        <th class="text-center">จัดการรายการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        decimal grandTotal = 0;
+                                    }
+                                    @foreach (var detail in item.DispenseDetails)
+                                    {
+                                        var price = detail.Medicine?.Price ?? 0;
+                                        var qty = detail.Quantity_dispensed ?? 0;
+                                        var rowTotal = (decimal)qty * price;
+                                        grandTotal += rowTotal;
+
+                                        <tr class="item-row">
+                                            <td class="fw-bold" style="color: var(--color-primary);">
+                                                @detail.Medicine?.Medicine_name
+                                                <input type="hidden" name="keepDetailIds" value="@detail.Dispense_detail_id" class="keep-id-input" />
+                                            </td>
+                                            <td class="text-center fw-bold fs-6">@qty</td>
+                                            <td class="text-end">@price.ToString("N2")</td>
+                                            <td class="text-end row-total fw-semibold" data-value="@rowTotal">@rowTotal.ToString("N2")</td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-remove-item" onclick="removeRow(this, '@item.Dispense_id')">
+                                                    <i class="bi bi-trash3 me-1"></i> ไม่อนุมัติรายการนี้
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr class="row-total-style">
+                                        <td colspan="3" class="text-end">ยอดรวมสุทธิ:</td>
+                                        <td class="text-end grand-total text-primary fs-6">@grandTotal.ToString("N2")</td>
+                                        <td class="text-center text-muted fw-normal">บาท</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-3 mt-4 pt-2 border-top">
+                            <button type="button" class="btn btn-reject-outline" onclick="submitReject('@item.Dispense_id')">
+                                <i class="bi bi-x-circle me-1"></i> ปฏิเสธคำขอทั้งหมด
+                            </button>
+                            <button type="submit" class="btn btn-approve shadow-sm" onclick="return confirm('ยืนยันการอนุมัติใบเบิกนี้และตัดยอดคลังสินค้าจริง?')">
+                                <i class="bi bi-check-lg me-1"></i> อนุมัติการเบิกตามนี้
+                            </button>
+                        </div>
+                    </form>
+
+                    <form asp-action="Reject" asp-route-id="@item.Dispense_id" method="post" id="form-reject-@item.Dispense_id" style="display:none;">
+                        @Html.AntiForgeryToken()
+                    </form>
+
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<script>
+    function removeRow(btn, dispenseId) {
+        if (confirm('คุณต้องการไม่อนุมัติรายการยานี้ใช่หรือไม่?')) {
+            const row = btn.closest('.item-row');
+            const table = document.getElementById('table-' + dispenseId);
+
+            row.remove(); // ลบแถวออกจากหน้าเว็บ
+
+            // คำนวณราคาสุทธิใหม่
+            let newTotal = 0;
+            table.querySelectorAll('.row-total').forEach(el => {
+                const val = parseFloat(el.getAttribute('data-value'));
+                if (!isNaN(val)) newTotal += val;
+            });
+
+            table.querySelector('.grand-total').innerText = newTotal.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+            // ดักเงื่อนไขถ้าลบยาจนเกลี้ยงการ์ดใบเบิก
+            const remainingRows = table.querySelectorAll('.item-row').length;
+            if (remainingRows === 0) {
+                alert('เนื่องจากไม่เหลือรายการยาในใบเบิกนี้แล้ว ระบบจะทำการเปลี่ยนเป็น "ปฏิเสธคำขอเบิกทั้งใบ" ให้ทันทีครับ');
+                submitReject(dispenseId);
+            }
+        }
+    }
+
+    function submitReject(dispenseId) {
+        if (confirm('ยืนยันที่จะปฏิเสธและยกเลิกคำขอใบเบิกเลขที่ ' + dispenseId + ' ทั้งใบใช่หรือไม่?')) {
+            document.getElementById('form-reject-' + dispenseId).submit();
+        }
+    }
+</script>
