@@ -1,7 +1,7 @@
 ﻿@model IEnumerable<DrugInventoryPro.Models.Medicines>
 
 @{
-    ViewData["Title"] = "จัดการล็อตและวันหมดอายุ (FEFO / FIFO)";
+    ViewData["Title"] = "จัดการล็อตและวันหมดอายุ (FEFO)";
 
     // จัดเรียงข้อมูลตาม FEFO (First Expired, First Out) - ล็อตที่หมดอายุก่อนจะขึ้นก่อนเสมอ
     var fefoList = Model?.OrderBy(m => m.Expired_at.HasValue ? m.Expired_at.Value : DateTime.MaxValue).ToList();
