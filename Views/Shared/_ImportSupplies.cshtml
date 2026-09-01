@@ -3,7 +3,7 @@
 <div class="modal fade" id="importSuppliesModal" tabindex="-1" aria-labelledby="importSuppliesModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form asp-controller="Receive" asp-action="PreviewExcel" method="post" enctype="multipart/form-data">
+            <form asp-controller="Receive" asp-action="Preview" method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
 
                 <!-- กำหนดประเภทเป็น SUP สำหรับนำเข้าเวชภัณฑ์/อุปกรณ์ -->

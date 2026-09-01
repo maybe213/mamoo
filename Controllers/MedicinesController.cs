@@ -321,10 +321,26 @@ namespace DrugInventoryPro.Controllers
             return View(alertList);
         }
 
+       
         // INDEX
         [HttpGet]
-        public async Task<IActionResult> Index(string search)
+        public async Task<IActionResult> Index(string search, string sortBy)
         {
+            // 🔹 1. ตรวจสอบและบันทึกค่า Sort ล่าสุดลง Session
+            if (!string.IsNullOrEmpty(sortBy))
+            {
+                // หากผู้ใช้เลือกค่าใหม่ ให้บันทึกลง Session
+                HttpContext.Session.SetString("Medicines_SortBy", sortBy);
+            }
+            else
+            {
+                // หากไม่มีการส่งค่ามา (กดเข้าหน้าเว็บใหม่) ให้ดึงค่าเดิมจาก Session (ถ้าไม่มีให้ใช้ค่าเริ่มต้น "id_asc")
+                sortBy = HttpContext.Session.GetString("Medicines_SortBy") ?? "id_asc";
+            }
+
+            // ส่งค่า Sort ปัจจุบันไปให้ View
+            ViewBag.CurrentSort = sortBy;
+
             var q = _context.Medicines
                 .AsNoTracking()
                 .Include(m => m.Category)
@@ -340,7 +356,6 @@ namespace DrugInventoryPro.Controllers
             }
             return View(await q.ToListAsync());
         }
-
         // CREATE GET
         [HttpGet]
         public async Task<IActionResult> Create()

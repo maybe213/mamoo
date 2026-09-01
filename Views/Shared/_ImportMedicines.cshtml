@@ -3,7 +3,7 @@
 <div class="modal fade" id="importExcelModal" tabindex="-1" aria-labelledby="importExcelModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form asp-controller="Receive" asp-action="PreviewExcel" method="post" enctype="multipart/form-data">
+            <form asp-controller="Receive" asp-action="Preview" method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <div class="modal-header">
                     <h5 class="modal-title" id="importExcelModalLabel">นำเข้าข้อมูลยาด้วยไฟล์ Excel</h5>

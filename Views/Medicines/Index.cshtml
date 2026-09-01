@@ -5,7 +5,7 @@
 
     // 🔹 รับค่าค้นหาและค่าการเรียงลำดับจาก Query String
     string currentSearch = Context.Request.Query["search"].ToString();
-    string currentSort = Context.Request.Query["sortBy"].ToString();
+    string currentSort = ViewBag.CurrentSort as string ?? "id_asc";
 
     // 🟢 กรองประเภท ยา / เวชภัณฑ์
     var rawSupplies = Model?.Where(m => m.Category?.Category_name != null
@@ -184,9 +184,6 @@
                 <!-- ตัวเลือกการเรียงลำดับ (Sorting) -->
                 <div class="col-md-5 col-12">
                     <div class="input-group">
-                        <span class="input-group-text bg-light text-secondary">
-                            <i class="bi bi-sort-down me-1"></i> เรียงตาม
-                        </span>
                         <select name="sortBy" class="form-select" onchange="this.form.submit()">
                             <option value="id_asc" selected="@(currentSort == "id_asc" || string.IsNullOrEmpty(currentSort))">รหัส (น้อยไปมาก)</option>
                             <option value="id_desc" selected="@(currentSort == "id_desc")">รหัส (มากไปน้อย)</option>

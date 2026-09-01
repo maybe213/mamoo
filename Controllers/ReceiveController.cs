@@ -2,10 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using ClosedXML.Excel;
 using DrugInventoryPro.Data;
 using DrugInventoryPro.Models;
 using DrugInventoryPro.Services;
@@ -26,9 +23,6 @@ namespace DrugInventoryPro.Controllers
             _excelParser = new ExcelParserService();
         }
 
-        // =====================================================================
-        // 0. หน้าแรกแสดงประวัติการรับเข้าคลัง
-        // =====================================================================
         [HttpGet]
         public async Task<IActionResult> Index()
         {
@@ -40,16 +34,19 @@ namespace DrugInventoryPro.Controllers
             return View(receives);
         }
 
-        // =====================================================================
-        // 1. อัปโหลด Excel และ Preview ข้อมูล (อ่านจากทุก Sheet)
-        // =====================================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> PreviewExcel(IFormFile excelFile, string invoiceNo, string receivedBy, string importType)
+        public async Task<IActionResult> Preview(IFormFile excelFile, string invoiceNo, string receivedBy, string importType)
         {
             if (excelFile == null || excelFile.Length == 0)
             {
-                TempData["ErrorMessage"] = "กรุณาเลือกไฟล์ที่ต้องการอัปโหลด";
+                TempData["ErrorMessage"] = "กรุณาเลือกไฟล์ CSV ที่ต้องการอัปโหลด";
+                return RedirectToAction("Index");
+            }
+
+            if (!excelFile.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["ErrorMessage"] = "ระบบรองรับเฉพาะไฟล์นามสกุล .csv เท่านั้น";
                 return RedirectToAction("Index");
             }
 
@@ -61,16 +58,18 @@ namespace DrugInventoryPro.Controllers
                     await excelFile.CopyToAsync(stream);
                 }
 
-                // อ่านข้อมูลจากทุก Sheet
-                var previewList = _excelParser.ParseExcelFile(tempFilePath, importType);
+                var csvParser = new CsvParserService();
+                string detectedDocumentTitle;
+
+                // ตอนนี้ previewList เป็น List<ReceiveDetail> ตรงตามที่ _excelParser ต้องการ
+                var previewList = csvParser.ParseCsvFile(tempFilePath, importType, out detectedDocumentTitle);
 
                 if (previewList == null || !previewList.Any())
                 {
-                    TempData["ErrorMessage"] = "ไฟล์ Excel ว่างเปล่า หรือไม่มีข้อมูลที่ถูกต้อง";
+                    TempData["ErrorMessage"] = "ไฟล์ CSV ว่างเปล่า หรือไม่มีข้อมูลรายการยาที่ถูกต้อง";
                     return RedirectToAction("Index");
                 }
 
-                // ตรวจจับรายการซ้ำ
                 var existingMedicines = await _context.Medicines.AsNoTracking().ToListAsync();
                 _excelParser.DetectDuplicates(previewList, existingMedicines);
 
@@ -78,19 +77,17 @@ namespace DrugInventoryPro.Controllers
                 ViewBag.ReceivedBy = receivedBy;
                 ViewBag.ImportType = importType;
                 ViewBag.TempFilePath = tempFilePath;
+                ViewBag.DocumentTitle = detectedDocumentTitle;
 
-                return View("PreviewExcel", previewList);
+                return View("Preview", previewList);
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = $"เกิดข้อผิดพลาดในการอ่านไฟล์: {ex.InnerException?.Message ?? ex.Message}";
+                TempData["ErrorMessage"] = $"การตรวจสอบไฟล์ล้มเหลว: {ex.Message}";
                 return RedirectToAction("Index");
             }
         }
 
-        // =====================================================================
-        // 2. บันทึกข้อมูลลง DB
-        // =====================================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequestFormLimits(ValueCountLimit = 5000)]
@@ -151,7 +148,6 @@ namespace DrugInventoryPro.Controllers
                                 var targetMed = dbMedicines.FirstOrDefault(m => m.Medicine_id == item.MatchedMedicineId);
                                 if (targetMed != null)
                                 {
-                                    // ✅ แก้ไข: เพิ่มเฉพาะจำนวนที่รับเข้าใน Stock และไม่แตะต้อง Quantity (เกณฑ์ขั้นต่ำ)
                                     targetMed.Stock = (targetMed.Stock ?? 0) + item.Quantity_received;
                                     targetMed.Price = item.Price ?? targetMed.Price;
                                     targetMed.Lot = item.Lot_number;
@@ -170,7 +166,6 @@ namespace DrugInventoryPro.Controllers
                                 currentMaxSeq++;
                                 finalMedicineId = $"{prefix}{currentMaxSeq:D3}";
 
-                                // ✅ แก้ไข: กำหนด minQuantity แยกต่างหาก ( default = 10 หรือปรับเปลี่ยนได้ตามต้องการ)
                                 var newMed = CreateNewMedicineObject(
                                     finalMedicineId, medName, item.Quantity_received,
                                     item.Price ?? 0, item.Lot_number, item.Expiry_date,
@@ -182,7 +177,6 @@ namespace DrugInventoryPro.Controllers
                                 dbMedicines.Add(newMed);
                             }
 
-                            // บันทึก ReceiveDetail พร้อม SheetName
                             var detail = new ReceiveDetail
                             {
                                 Receive_detail_id = $"{generatedReceiveId}-{detailSeq++:D3}",
@@ -217,7 +211,6 @@ namespace DrugInventoryPro.Controllers
             }
             finally
             {
-                // ลบไฟล์ชั่วคราว
                 if (!string.IsNullOrEmpty(tempFilePath) && System.IO.File.Exists(tempFilePath))
                 {
                     try { System.IO.File.Delete(tempFilePath); } catch { }
@@ -225,9 +218,6 @@ namespace DrugInventoryPro.Controllers
             }
         }
 
-        // =====================================================================
-        // 3. แสดงรายละเอียดใบรับเข้าคลัง (Details)
-        // =====================================================================
         [HttpGet]
         public async Task<IActionResult> Details(string id)
         {
@@ -248,10 +238,6 @@ namespace DrugInventoryPro.Controllers
             ViewBag.Items = items;
             return View(receive);
         }
-
-        // =====================================================================
-        // Helper Methods
-        // =====================================================================
 
         private string GetValidCategoryId(List<Category> categories, string importType)
         {
@@ -284,7 +270,6 @@ namespace DrugInventoryPro.Controllers
                 .Max();
         }
 
-        // ✅ แก้ไข: เพิ่มพารามิเตอร์ minQuantity เพื่อกำหนดเกณฑ์เตือนสต็อกต่ำสุด แยกกับ Stock
         private Medicines CreateNewMedicineObject(
             string medId, string medName, int stockQuantity, decimal price,
             string lotNumber, DateTime expiryDate, string packingSize,
@@ -294,8 +279,8 @@ namespace DrugInventoryPro.Controllers
             {
                 Medicine_id = medId,
                 Medicine_name = medName,
-                Stock = stockQuantity,    // สต็อกจริง ณ ปัจจุบัน
-                Quantity = minQuantity,   // เกณฑ์สต็อกต่ำสุดที่ต้องการตั้งไว้
+                Stock = stockQuantity,
+                Quantity = minQuantity,
                 Price = price,
                 Lot = lotNumber,
                 Expired_at = expiryDate,
@@ -306,26 +291,5 @@ namespace DrugInventoryPro.Controllers
             };
         }
     }
-
-    // =====================================================================
-    // Model / DTO สำหรับรับค่าการ Preview และ Confirm
-    // =====================================================================
-    public class ReceiveDetailModel
-    {
-        public string? Medicine_id { get; set; }
-        public string? Medicine_name { get; set; }
-        public int Quantity_received { get; set; }
-        public decimal? Price { get; set; }
-        public string? Lot_number { get; set; }
-        public DateTime Expiry_date { get; set; } = DateTime.Now;
-        public string? Packing_Size { get; set; }
-        public string? Account_Type { get; set; }
-
-        public string? SheetName { get; set; }
-
-        public string ActionType { get; set; } = "AddNew"; // AddNew, UpdateExisting, DisableOldAndAddNew
-        public string? MatchedMedicineId { get; set; }
-        public string? MatchedMedicineName { get; set; }
-        public bool IsDuplicateOrSimilar { get; set; }
-    }
+    // *** ลบ class ReceiveDetailModel ออกเรียบร้อยแล้ว ***
 }

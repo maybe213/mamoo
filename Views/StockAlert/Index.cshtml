@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "จัดการล็อตและวันหมดอายุ (FEFO)";
 
-    // จัดเรียงข้อมูลตาม FEFO (First Expired, First Out) - ล็อตที่หมดอายุก่อนจะขึ้นก่อนเสมอ
+    // จัดเรียงข้อมูลตาม FEFO (First Expired, First Out)
     var fefoList = Model?.OrderBy(m => m.Expired_at.HasValue ? m.Expired_at.Value : DateTime.MaxValue).ToList();
 
     var today = DateTime.Today;
@@ -17,7 +17,6 @@
 }
 
 <style>
-    /* 🌟 Ergonomic Medical UI/UX Theme (Prevent Alert Fatigue) */
     :root {
         --med-primary: #026AA7;
         --med-bg: #F8FAFC;
@@ -26,7 +25,6 @@
         --med-text-muted: #64748B;
         --med-border: #E2E8F0;
         --med-header-bg: #F0F9FF;
-        /* FEFO Alert Colors */
         --alert-danger-text: #DC2626;
         --alert-danger-bg: #FEF2F2;
         --alert-danger-border: #FECACA;
@@ -55,18 +53,23 @@
         font-size: 0.875rem;
     }
 
-    /* Stats Cards */
-    .stat-card {
+    /* Clickable Stats Cards */
+    .stat-card-clickable {
         border: 1px solid var(--med-border);
         border-radius: 10px;
         background: #FFFFFF;
         padding: 16px;
+        cursor: pointer;
         transition: transform 0.2s, box-shadow 0.2s;
     }
 
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        .stat-card-clickable:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-card-clickable:active {
+            transform: translateY(0);
         }
 
     .stat-number {
@@ -74,7 +77,7 @@
         font-weight: 700;
     }
 
-    /* Card & Table */
+    /* Table Styling */
     .card-med-table {
         border: 1px solid var(--med-border);
         border-radius: 12px;
@@ -113,7 +116,6 @@
             background-color: #F8FAFC;
         }
 
-    /* Soft Alert Badges */
     .badge-med-alert {
         padding: 6px 12px;
         border-radius: 6px;
@@ -174,34 +176,34 @@
         <div>
             <h2 class="page-title mb-1 d-flex align-items-center gap-2">
                 <i class="bi bi-box-seam-fill text-primary"></i>
-                <span>จัดการล็อตและวันหมดอายุ (FEFO / FIFO)</span>
+                <span>จัดการล็อตและวันหมดอายุ (FEFO)</span>
             </h2>
             <p class="page-subtitle mb-0">ตรวจสอบเลขล็อต วันหมดอายุ และจัดลำดับการจ่ายยาเพื่อป้องกันการจ่ายยาเสื่อมสภาพ</p>
         </div>
     </div>
 
-    <!-- Summary Stats Cards -->
+    <!-- Summary Stats Cards (คลิกได้เพื่อกรองข้อมูล) -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="stat-card">
+            <div class="stat-card-clickable" onclick="filterByStatus('ALL')">
                 <div class="text-muted small fw-bold">ล็อตยาทั้งหมด</div>
                 <div class="stat-number text-dark mt-1">@totalLots <span class="fs-6 text-muted fw-normal">รายการ</span></div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="stat-card" style="border-left: 4px solid var(--alert-danger-text);">
+            <div class="stat-card-clickable" style="border-left: 4px solid var(--alert-danger-text);" onclick="filterByStatus('EXPIRED')">
                 <div class="text-danger small fw-bold">หมดอายุแล้ว (ห้ามจ่าย)</div>
                 <div class="stat-number text-danger mt-1">@expiredCount <span class="fs-6 text-muted fw-normal">รายการ</span></div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="stat-card" style="border-left: 4px solid var(--alert-warning-text);">
+            <div class="stat-card-clickable" style="border-left: 4px solid var(--alert-warning-text);" onclick="filterByStatus('EXPIRING_SOON')">
                 <div class="text-warning small fw-bold">ใกล้หมดอายุ (ต้องเร่งจ่าย FEFO)</div>
                 <div class="stat-number text-warning mt-1">@expiringSoonCount <span class="fs-6 text-muted fw-normal">รายการ</span></div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="stat-card" style="border-left: 4px solid var(--alert-success-text);">
+            <div class="stat-card-clickable" style="border-left: 4px solid var(--alert-success-text);" onclick="filterByStatus('NORMAL')">
                 <div class="text-success small fw-bold">สถานะปกติ</div>
                 <div class="stat-number text-success mt-1">@normalCount <span class="fs-6 text-muted fw-normal">รายการ</span></div>
             </div>
@@ -211,7 +213,6 @@
     <!-- Search & Filter Controls -->
     <div class="card p-3 mb-4 border-0 shadow-sm" style="background-color: #FFFFFF; border-radius: 10px;">
         <div class="row g-2 align-items-center">
-            <!-- ค้นหา -->
             <div class="col-md-5">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
@@ -219,7 +220,6 @@
                 </div>
             </div>
 
-            <!-- ตัวกรองสถานะ -->
             <div class="col-md-4">
                 <select id="statusFilter" class="form-select">
                     <option value="ALL">-- แสดงรายการทั้งหมด --</option>
@@ -227,13 +227,6 @@
                     <option value="EXPIRING_SOON">⚠️ ใกล้หมดอายุภายใน 30 วัน (FEFO Alert)</option>
                     <option value="NORMAL">✅ สถานะปกติ (Normal)</option>
                 </select>
-            </div>
-
-            <!-- ปุ่มทางลัด Quick Filter -->
-            <div class="col-md-3 text-end">
-                <button type="button" class="btn btn-outline-warning w-100 fw-bold" onclick="filterExpiringSoon()">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i> ยาเร่งจ่าย (FEFO)
-                </button>
             </div>
         </div>
     </div>
@@ -244,12 +237,12 @@
             <table class="table table-med table-hover w-100" id="lotTable">
                 <thead>
                     <tr>
-                        <th class="text-center" style="width: 12%;">เลขล็อต (Lot)</th>
+                        <th class="text-center" style="width: 17%;">เลขล็อต (Lot)</th>
                         <th class="text-center" style="width: 12%;">รหัสยา</th>
-                        <th style="width: 26%;">ชื่อเวชภัณฑ์/ยา</th>
+                        <th style="width: 28%;">ชื่อเวชภัณฑ์/ยา</th>
                         <th class="text-center" style="width: 12%;">คงเหลือ (สต็อก)</th>
                         <th class="text-center" style="width: 13%;">วันหมดอายุ</th>
-                        <th class="text-center" style="width: 25%;">ลำดับการจ่ายยา & สถานะ (FEFO)</th>
+                        <th class="text-center" style="width: 18%;">สถานะ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -263,30 +256,25 @@
                             string filterCategory = isExpired ? "EXPIRED" : (isExpiringSoon ? "EXPIRING_SOON" : "NORMAL");
 
                             <tr class="lot-row" data-category="@filterCategory">
-                                <!-- Lot Number -->
                                 <td class="text-center">
                                     <span class="lot-badge lot-text">
                                         <i class="bi bi-tag-fill me-1"></i>@(string.IsNullOrEmpty(item.Lot) ? "N/A" : item.Lot)
                                     </span>
                                 </td>
 
-                                <!-- Medicine ID -->
                                 <td class="text-center">
                                     <span class="code-badge">@item.Medicine_id</span>
                                 </td>
 
-                                <!-- Medicine Name -->
                                 <td class="fw-bold text-dark search-target">
                                     <i class="bi bi-capsule-pill me-1 text-primary"></i>
                                     @(item.Medicine_name ?? "ไม่ระบุชื่อยา")
                                 </td>
 
-                                <!-- Stock Count -->
                                 <td class="text-center fw-bold fs-6 text-dark">
                                     @(item.Stock ?? 0) @(item.MedicineUnit?.Unit_name ?? "หน่วย")
                                 </td>
 
-                                <!-- Expiry Date -->
                                 <td class="text-center fw-semibold @(isExpired ? "text-danger" : (isExpiringSoon ? "text-warning" : "text-dark"))">
                                     @if (item.Expired_at.HasValue)
                                     {
@@ -299,19 +287,18 @@
                                     }
                                 </td>
 
-                                <!-- FEFO Status / Action Badges -->
                                 <td class="text-center">
                                     <div class="d-flex flex-column gap-1 align-items-center">
                                         @if (isExpired)
                                         {
                                             <span class="badge-med-alert badge-critical">
-                                                <i class="bi bi-x-circle-fill"></i> หมดอายุ! ห้ามจ่ายยา 
+                                                <i class="bi bi-x-circle-fill"></i> หมดอายุ! ห้ามจ่ายยา
                                             </span>
                                         }
                                         else if (isExpiringSoon)
                                         {
                                             <span class="badge-med-alert badge-warning">
-                                                <i class="bi bi-arrow-up-circle-fill"></i> จ่ายล็อตนี้ก่อน 
+                                                <i class="bi bi-arrow-up-circle-fill"></i> จ่ายล็อตนี้ก่อน
                                             </span>
                                         }
                                         else
@@ -337,7 +324,6 @@
                         </tr>
                     }
 
-                    <!-- Row สำหรับกรณีค้นหา/กรองแล้วไม่พบข้อมูล -->
                     <tr id="noFilterMatchRow" style="display: none;">
                         <td colspan="6" class="text-center py-5 text-muted">
                             <div class="d-flex flex-column align-items-center gap-2">
@@ -352,50 +338,56 @@
     </div>
 </div>
 
-<!-- JavaScript ค้นหาและกรองแบบ Real-time (ปรับปรุงประสิทธิภาพการค้นหา) -->
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    // 🔹 ฟังก์ชันกรองข้อมูลตาราง
+    function filterData() {
         const searchInput = document.getElementById("searchInput");
         const statusFilter = document.getElementById("statusFilter");
         const rows = document.querySelectorAll(".lot-row");
         const noFilterMatchRow = document.getElementById("noFilterMatchRow");
 
-        function filterData() {
-            const query = searchInput.value.toLowerCase().trim();
-            const selectedStatus = statusFilter.value;
-            let visibleCount = 0;
+        if (!searchInput || !statusFilter) return;
 
-            rows.forEach(row => {
-                // ดึงเฉพาะข้อมูลในฟิลด์ที่ต้องการค้นหา เพื่อป้องกันการจับคำผิดจากข้อความใน Badge สถานะ
-                const lotText = row.querySelector(".lot-text")?.innerText.toLowerCase() || "";
-                const codeText = row.querySelector(".code-badge")?.innerText.toLowerCase() || "";
-                const nameText = row.querySelector(".search-target")?.innerText.toLowerCase() || "";
+        const query = searchInput.value.toLowerCase().trim();
+        const selectedStatus = statusFilter.value;
+        let visibleCount = 0;
 
-                const matchesSearch = !query || lotText.includes(query) || codeText.includes(query) || nameText.includes(query);
-                const category = row.getAttribute("data-category");
-                const matchesStatus = (selectedStatus === "ALL" || category === selectedStatus);
+        rows.forEach(row => {
+            const lotText = row.querySelector(".lot-text")?.innerText.toLowerCase() || "";
+            const codeText = row.querySelector(".code-badge")?.innerText.toLowerCase() || "";
+            const nameText = row.querySelector(".search-target")?.innerText.toLowerCase() || "";
 
-                if (matchesSearch && matchesStatus) {
-                    row.style.display = "";
-                    visibleCount++;
-                } else {
-                    row.style.display = "none";
-                }
-            });
+            const matchesSearch = !query || lotText.includes(query) || codeText.includes(query) || nameText.includes(query);
+            const category = row.getAttribute("data-category");
+            const matchesStatus = (selectedStatus === "ALL" || category === selectedStatus);
 
-            // ควบคุมการแสดงผล Row กรณีไม่พบข้อมูลค้นหา
-            if (noFilterMatchRow) {
-                noFilterMatchRow.style.display = (visibleCount === 0 && rows.length > 0) ? "" : "none";
+            if (matchesSearch && matchesStatus) {
+                row.style.display = "";
+                visibleCount++;
+            } else {
+                row.style.display = "none";
             }
+        });
+
+        if (noFilterMatchRow) {
+            noFilterMatchRow.style.display = (visibleCount === 0 && rows.length > 0) ? "" : "none";
         }
-
-        searchInput.addEventListener("input", filterData);
-        statusFilter.addEventListener("change", filterData);
-    });
-
-    function filterExpiringSoon() {
-        const statusFilter = document.getElementById("statusFilter");
-        statusFilter.value = "EXPIRING_SOON";
-        statusFilter.dispatchEvent(new Event("change"));
     }
+
+    // 🔹 ฟังก์ชันเปลี่ยนตัวกรองเมื่อคลิกการ์ด
+    function filterByStatus(status) {
+        const statusFilter = document.getElementById("statusFilter");
+        if (statusFilter) {
+            statusFilter.value = status;
+            filterData(); // ประมวลผลกรองข้อมูลทันที
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("searchInput");
+        const statusFilter = document.getElementById("statusFilter");
+
+        if (searchInput) searchInput.addEventListener("input", filterData);
+        if (statusFilter) statusFilter.addEventListener("change", filterData);
+    });
 </script>
