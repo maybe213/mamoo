@@ -45,9 +45,9 @@ namespace DrugInventoryPro.Controllers
         }
 
         // Helper วิเคราะห์ Prefix จาก Category หรือ Account_Type (MED / SUP)
-        private async Task<string> ResolvePrefixAsync(string? categoryId, string? accountType = null)
+        private async Task<string> ResolvePrefixAsync(string? categoryId, string? account_Type = null)
         {
-            if (!string.IsNullOrEmpty(accountType) && accountType.Trim().Equals("เวชภัณฑ์", StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(account_Type) && account_Type.Trim().Equals("เวชภัณฑ์", StringComparison.OrdinalIgnoreCase))
                 return "SUP";
 
             if (!string.IsNullOrEmpty(categoryId) && int.TryParse(categoryId, out int catId))

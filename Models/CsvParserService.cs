@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using DrugInventoryPro.Models;
 
 namespace DrugInventoryPro.Services
@@ -51,13 +52,12 @@ namespace DrugInventoryPro.Services
                 throw new Exception($"ประเภทการรับเข้าที่คุณเลือกคือ '{targetCategory}' แต่หัวเอกสารในไฟล์คือ '{rawTitle}' ซึ่งไม่ตรงกับเงื่อนไขที่กำหนด");
             }
 
-            bool isGeneralDrugSheet = matchedTitle.Contains("ใบเบิกเวชภัณฑ์ยา (ยาทั่วไป)");
             var resultList = new List<ReceiveDetail>();
             int headerRowIndex = -1;
 
             for (int i = 0; i < lines.Length; i++)
             {
-                if (lines[i].Contains("รายการ") || lines[i].Contains("ชื่อยา"))
+                if (lines[i].Contains("รายการ") || lines[i].Contains("ชื่อยา") || lines[i].Contains("ชื่อเวชภัณฑ์"))
                 {
                     headerRowIndex = i;
                     break;
@@ -67,64 +67,138 @@ namespace DrugInventoryPro.Services
             if (headerRowIndex == -1)
                 throw new Exception("ไม่พบตารางข้อมูลในไฟล์ CSV (ไม่พบหัวคอลัมน์รายการ)");
 
-            var headers = ParseCsvLine(lines[headerRowIndex]);
-
-            int nameIdx = GetColumnIndex(headers, "รายการ", "ชื่อยา", "ชื่อเวชภัณฑ์");
-            int strengthIdx = isGeneralDrugSheet ? GetColumnIndex(headers, "ความแรง", "ปริมาตรบรรจุ") : -1;
-            int packIdx = GetColumnIndex(headers, "ขนาดบรรจุ", "หน่วยบรรจุ");
-            int qtyIdx = GetColumnIndex(headers, "จำนวนเบิก", "จำนวนรับ", "จำนวน");
-            int priceIdx = GetColumnIndex(headers, "ราคา", "ราคา/หน่วย");
-            int lotIdx = GetColumnIndex(headers, "Lot", "เลขล็อต");
-            int expIdx = GetColumnIndex(headers, "วันหมดอายุ", "Exp");
-
             for (int i = headerRowIndex + 1; i < lines.Length; i++)
             {
                 if (string.IsNullOrWhiteSpace(lines[i])) continue;
 
                 var cols = ParseCsvLine(lines[i]);
-                if (cols.Count == 0 || nameIdx >= cols.Count || string.IsNullOrWhiteSpace(cols[nameIdx]))
+                if (cols.Count <= 1) continue;
+
+                // ข้ามบรรทัดที่เป็น sub-header หรือไม่มีชื่อรายการ
+                string rawName = cols[1].Trim();
+                if (string.IsNullOrWhiteSpace(rawName) ||
+                    rawName == "รายการยา" ||
+                    rawName == "รายการเวชภัณฑ์ที่มิใช่ยา" ||
+                    rawName == "ชื่อยา" ||
+                    int.TryParse(rawName, out _))
+                {
                     continue;
+                }
 
-                string medicineName = cols[nameIdx].Trim();
+                string medicineName = rawName;
                 string packingSize = "";
+                string accountType = isMed ? "ED" : "เวชภัณฑ์";
+                string qtyRaw = "";
+                string remark = "";
 
-                if (isGeneralDrugSheet && strengthIdx != -1 && strengthIdx < cols.Count)
+                if (isMed)
                 {
-                    string strength = cols[strengthIdx].Trim();
-                    if (!string.IsNullOrEmpty(strength)) packingSize = strength;
+                    // โครงสร้างไฟล์ใบเบิกยา (MED):
+                    // Col 1: ชื่อยา
+                    // Col 2: ความแรง / ปริมาตร
+                    // Col 3: ขนาดบรรจุ
+                    // Col 4: ประเภทบัญชียา (ED / NED)
+                    // Col 7: จำนวนขอเบิก
+                    // Col 8: หมายเหตุ
+
+                    string strength = cols.Count > 2 ? cols[2].Trim() : "";
+                    string pack = cols.Count > 3 ? cols[3].Trim() : "";
+
+                    if (!string.IsNullOrEmpty(strength) && !string.IsNullOrEmpty(pack))
+                        packingSize = $"{strength} ({pack})";
+                    else if (!string.IsNullOrEmpty(strength))
+                        packingSize = strength;
+                    else
+                        packingSize = pack;
+
+                    if (cols.Count > 4)
+                    {
+                        var accVal = cols[4].Trim().ToUpper();
+                        if (accVal.Contains("NED")) accountType = "NED";
+                        else if (accVal.Contains("ED")) accountType = "ED";
+                    }
+
+                    qtyRaw = cols.Count > 7 ? cols[7].Trim() : (cols.Count > 6 ? cols[6].Trim() : "");
+                    remark = cols.Count > 8 ? cols[8].Trim() : "";
+                }
+                else
+                {
+                    // โครงสร้างไฟล์เวชภัณฑ์ (SUP):
+                    // Col 1: ชื่อเวชภัณฑ์
+                    // Col 2: ขนาด / คุณลักษณะ
+                    // Col 3: จำนวนขอเบิก
+                    // Col 5: หมายเหตุ
+
+                    packingSize = cols.Count > 2 ? cols[2].Trim() : "";
+                    qtyRaw = cols.Count > 3 ? cols[3].Trim() : "";
+                    remark = cols.Count > 5 ? cols[5].Trim() : "";
                 }
 
-                if (packIdx != -1 && packIdx < cols.Count && !string.IsNullOrEmpty(cols[packIdx]))
-                {
-                    packingSize += string.IsNullOrEmpty(packingSize) ? cols[packIdx].Trim() : $" ({cols[packIdx].Trim()})";
-                }
+                int qty = ParseQuantity(qtyRaw);
 
-                int.TryParse(GetColValue(cols, qtyIdx), out int qty);
-                decimal.TryParse(GetColValue(cols, priceIdx), out decimal price);
-
-                string lot = GetColValue(cols, lotIdx);
-                if (string.IsNullOrEmpty(lot)) lot = "-";
-
-                DateTime expDate = DateTime.Now.AddYears(1);
-                if (expIdx != -1 && expIdx < cols.Count)
-                {
-                    DateTime.TryParse(cols[expIdx], out expDate);
-                }
-
+                string prefix = isMed ? "MED" : "SUP";
                 resultList.Add(new ReceiveDetail
                 {
+                    Receive_detail_id = Guid.NewGuid().ToString("N"),
+                    Medicine_id = $"{prefix}-TEMP-{Guid.NewGuid().ToString().Substring(0, 8)}",
                     Medicine_name = medicineName,
-                    Quantity_received = qty > 0 ? qty : 1,
-                    Price = price,
-                    Lot_number = lot,
-                    Expiry_date = expDate > DateTime.MinValue ? expDate : DateTime.Now.AddYears(1),
+                    Quantity_received = qty,
+                    Price = 0m,
+                    Lot_number = $"LOT-{DateTime.Now:yyyyMMdd}",
+                    Expiry_date = DateTime.Now.AddYears(2),
                     Packing_Size = packingSize,
-                    Account_Type = isMed ? "ED" : "เวชภัณฑ์",
-                    SheetName = matchedTitle
+                    Account_Type = accountType,
+                    Remark = remark,
+                    SheetName = matchedTitle,
+                    ActionType = "AddNew",
+                    IsDuplicateOrSimilar = false
                 });
             }
 
             return resultList;
+        }
+
+        /// <summary>
+        /// แปลงข้อความจำนวน เช่น "4*50", "1*500", "10 ขวด", "2x25" ให้เป็นตัวเลขรวม
+        /// </summary>
+        private int ParseQuantity(string qtyStr)
+        {
+            if (string.IsNullOrWhiteSpace(qtyStr)) return 0;
+
+            qtyStr = qtyStr.Trim().Replace(",", "");
+
+            // ลบชื่อหน่วยนับออกเพื่อป้องกันการรบกวนการ parse ตัวเลข
+            string[] units = { "อัน", "ชิ้น", "ขวด", "กล่อง", "โหล", "ม้วน", "ชั้น", "ซอง", "cap", "tab", "amp" };
+            foreach (var u in units)
+            {
+                qtyStr = qtyStr.Replace(u, "", StringComparison.OrdinalIgnoreCase);
+            }
+
+            // คำนวณสูตรคูณ เช่น "4*50" หรือ "2x25"
+            if (qtyStr.Contains('*') || qtyStr.Contains('x') || qtyStr.Contains('X'))
+            {
+                var parts = qtyStr.Split(new[] { '*', 'x', 'X' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 2)
+                {
+                    var match1 = Regex.Match(parts[0], @"\d+");
+                    var match2 = Regex.Match(parts[1], @"\d+");
+                    if (match1.Success && match2.Success)
+                    {
+                        if (int.TryParse(match1.Value, out int p1) && int.TryParse(match2.Value, out int p2))
+                        {
+                            return p1 * p2;
+                        }
+                    }
+                }
+            }
+
+            var match = Regex.Match(qtyStr, @"\d+");
+            if (match.Success && int.TryParse(match.Value, out int result))
+            {
+                return result;
+            }
+
+            return 0;
         }
 
         private List<string> ParseCsvLine(string line)
@@ -151,24 +225,6 @@ namespace DrugInventoryPro.Services
             }
             result.Add(sb.ToString().Trim());
             return result;
-        }
-
-        private int GetColumnIndex(List<string> headers, params string[] keywords)
-        {
-            for (int i = 0; i < headers.Count; i++)
-            {
-                foreach (var kw in keywords)
-                {
-                    if (headers[i].Contains(kw, StringComparison.OrdinalIgnoreCase))
-                        return i;
-                }
-            }
-            return -1;
-        }
-
-        private string GetColValue(List<string> cols, int index)
-        {
-            return (index != -1 && index < cols.Count) ? cols[index].Trim() : "";
         }
 
         private Encoding DetectEncoding(string filePath)

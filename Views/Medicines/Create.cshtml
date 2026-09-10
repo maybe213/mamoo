@@ -4,105 +4,115 @@
 }
 
 <style>
-    /* กำหนดตัวแปรชุดสีให้สอดคล้องกับระบบหลัก */
     :root {
-        --theme-dark: #212529;
-        --theme-primary: #0d6efd;
-        --theme-primary-hover: #0b5ed7;
-        --theme-white: #ffffff;
-        --theme-border: #ced4da;
-        --theme-focus-ring: rgba(13, 110, 253, 0.25);
+        --primary-color: #2563EB;
+        --primary-hover: #1D4ED8;
+        --primary-light: #EFF6FF;
+        --primary-border: #BFDBFE;
+        --bg-main: #F8FAFC;
+        --card-bg: #FFFFFF;
+        --text-dark: #0F172A;
+        --text-muted: #64748B;
+        --border-color: #E2E8F0;
+        --focus-ring: rgba(37, 99, 235, 0.2);
+    }
+
+    body {
+        background-color: var(--bg-main);
+        color: var(--text-dark);
+        font-family: 'Sarabun', sans-serif;
     }
 
     .form-card {
-        background: var(--theme-white);
-        border: 2px solid var(--theme-dark);
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
         border-radius: 16px;
         padding: 32px;
         max-width: 860px;
         margin: 0 auto;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
     }
 
     .form-label {
         font-weight: 600;
-        font-size: 13px;
-        color: var(--theme-dark);
+        font-size: 0.85rem;
+        color: var(--text-dark);
     }
 
     .form-control, .form-select {
-        border: 1.5px solid var(--theme-border);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 10px 14px;
+        color: var(--text-dark);
     }
 
         .form-control:focus, .form-select:focus {
-            border-color: var(--theme-primary);
-            box-shadow: 0 0 0 3px var(--theme-focus-ring);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--focus-ring);
             outline: none;
         }
 
     .section-header {
-        font-size: 13px;
+        font-size: 0.825rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        color: var(--theme-primary);
-        border-bottom: 2px solid var(--theme-primary);
+        letter-spacing: 0.5px;
+        color: var(--primary-color);
+        border-bottom: 2px solid var(--border-color);
         padding-bottom: 6px;
         margin-bottom: 18px;
     }
 
     .btn-save {
-        background: var(--theme-primary);
-        color: var(--theme-white);
+        background: var(--primary-color);
+        color: #ffffff;
         border: none;
-        padding: 10px 32px;
+        padding: 10px 28px;
         border-radius: 8px;
-        font-weight: 700;
+        font-weight: 600;
         transition: all 0.2s;
     }
 
         .btn-save:hover {
-            background: var(--theme-primary-hover);
-            color: var(--theme-white);
+            background: var(--primary-hover);
+            color: #ffffff;
         }
 
     .btn-cancel {
-        background: var(--theme-white);
-        color: var(--theme-dark);
-        border: 2px solid var(--theme-dark);
+        background: #FFFFFF;
+        color: var(--text-dark);
+        border: 1px solid var(--border-color);
         padding: 10px 24px;
         border-radius: 8px;
-        font-weight: 700;
+        font-weight: 600;
         transition: all 0.2s;
     }
 
         .btn-cancel:hover {
-            background: var(--theme-dark);
-            color: var(--theme-white);
+            background: #F1F5F9;
+            color: var(--text-dark);
         }
 
     .id-badge {
-        background: var(--theme-dark);
-        color: var(--theme-white);
+        background: var(--text-dark);
+        color: #ffffff;
         font-family: monospace;
-        font-size: 14px;
-        padding: 6px 16px;
+        font-size: 13px;
+        padding: 4px 12px;
         border-radius: 20px;
         display: inline-block;
     }
 
-    /* กล่องแจ้งเตือนข้อมูลซ้ำ */
     .duplicate-box {
-        background: rgba(13, 110, 253, 0.03);
-        border: 2px dashed var(--theme-primary);
+        background: var(--primary-light);
+        border: 1.5px dashed var(--primary-color);
         border-radius: 12px;
         padding: 20px;
     }
 
     .duplicate-radio-card {
-        background: var(--theme-white);
-        border: 1.5px solid var(--theme-dark);
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         padding: 12px 16px;
         cursor: pointer;
@@ -110,24 +120,22 @@
     }
 
         .duplicate-radio-card:hover {
-            border-color: var(--theme-primary);
-            background: rgba(13, 110, 253, 0.05);
+            border-color: var(--primary-color);
+            background: var(--primary-light);
         }
 
-    /* CSS สำหรับสถานะการเลือก Radio การจัดการข้อมูลซ้ำ */
     .form-check-input:checked + .form-check-label .duplicate-radio-card {
-        border-color: var(--theme-primary);
-        background: rgba(13, 110, 253, 0.05);
-        box-shadow: 0 0 0 3px var(--theme-focus-ring);
+        border-color: var(--primary-color);
+        background: var(--primary-light);
+        box-shadow: 0 0 0 3px var(--focus-ring);
     }
 </style>
 
 <div class="container py-4">
-    <div class="form-card shadow-sm">
-
+    <div class="form-card">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h4 class="fw-bold mb-1"><i class="bi bi-plus-circle-fill me-2 text-primary"></i>เพิ่มรายการยาและเวชภัณฑ์</h4>
+                <h4 class="fw-bold mb-1 text-dark"><i class="bi bi-plus-circle-fill me-2 text-primary"></i>เพิ่มรายการยาและเวชภัณฑ์</h4>
                 <small class="text-muted">รหัสล่าสุดในระบบ: <span class="id-badge">@ViewBag.NextId</span></small>
             </div>
             <a asp-action="Index" class="btn-cancel text-decoration-none">
@@ -135,10 +143,9 @@
             </a>
         </div>
 
-        @* แสดง Error ถ้าเกิดข้อผิดพลาดของ Model Validation *@
         @if (!ViewData.ModelState.IsValid)
         {
-            <div class="alert alert-danger rounded-3 border-2 border-danger mb-4">
+            <div class="alert alert-danger rounded-3 border-0 shadow-sm mb-4">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 <strong>กรุณาตรวจสอบข้อมูล:</strong>
                 <ul class="mb-0 mt-1">
@@ -159,7 +166,6 @@
         <form asp-action="Create" method="post">
             @Html.AntiForgeryToken()
 
-            @* ── ส่วนพิเศษ: แจ้งเตือนเมื่อพบรายการยาที่กรอกซ้ำกันในระบบ ── *@
             @if (ViewBag.DuplicateFound == true)
             {
                 <div class="duplicate-box mb-4 animate__animated animate__fadeIn">
@@ -193,18 +199,18 @@
                 </div>
             }
 
-            @* ── ส่วนเลือกประเภทรับเข้า ── *@
-            <div class="mb-4 p-3" style="background-color: rgba(13, 110, 253, 0.03); border: 2px solid var(--theme-dark); border-radius: 12px;">
+            <!-- ส่วนเลือกประเภทรับเข้า -->
+            <div class="mb-4 p-3 rounded-3" style="background-color: var(--primary-light); border: 1px solid var(--primary-border);">
                 <label class="form-label fw-bold mb-2">เลือกหมวดหมู่ที่ต้องการรับเข้า <span class="text-danger">*</span></label>
                 <div class="d-flex gap-4">
                     <div class="form-check">
-                        <input class="form-check-input border-dark" type="radio" name="ItemType" id="typeMed" value="MED" checked onchange="updatePrefix()">
+                        <input class="form-check-input" type="radio" name="ItemType" id="typeMed" value="MED" checked onchange="updatePrefix()">
                         <label class="form-check-label fw-bold text-primary" style="cursor: pointer;" for="typeMed" id="labelTypeMed">
                             <i class="bi bi-capsule me-1"></i> รับยา (MED)
                         </label>
                     </div>
                     <div class="form-check">
-                        <input class="form-check-input border-dark" type="radio" name="ItemType" id="typeSup" value="SUP" onchange="updatePrefix()">
+                        <input class="form-check-input" type="radio" name="ItemType" id="typeSup" value="SUP" onchange="updatePrefix()">
                         <label class="form-check-label fw-bold text-dark" style="cursor: pointer;" for="typeSup" id="labelTypeSup">
                             <i class="bi bi-bandaid me-1"></i> รับเวชภัณฑ์ (SUP)
                         </label>
@@ -212,20 +218,19 @@
                 </div>
             </div>
 
-            @* ── ส่วนที่ 1: ข้อมูลพื้นฐาน ── *@
+            <!-- ส่วนที่ 1: ข้อมูลพื้นฐาน -->
             <div class="section-header mb-3">ข้อมูลพื้นฐาน</div>
-
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
                     <label class="form-label">
                         รหัส (Item ID) <span class="text-danger">*</span>
-                        <small class="text-muted fw-normal">(สร้างให้อัตโนมัติ)</small>
+                        <small class="text-muted fw-normal">(อัตโนมัติ)</small>
                     </label>
                     <div class="input-group">
-                        <span class="input-group-text bg-light text-muted"><i class="bi bi-lock-fill"></i></span>
+                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-lock-fill"></i></span>
                         <input asp-for="Medicine_id"
                                id="medicine_id_input"
-                               class="form-control fw-bold bg-light text-primary"
+                               class="form-control fw-bold bg-light text-primary border-start-0"
                                style="font-family: monospace; font-size: 15px;"
                                value="@(Model?.Medicine_id ?? ViewBag.NextId)"
                                readonly
@@ -257,7 +262,7 @@
                 </div>
             </div>
 
-            @* ── ส่วนที่ 2: สต็อกและราคา ── *@
+            <!-- ส่วนที่ 2: สต็อกและราคา -->
             <div class="section-header mb-3">สต็อกและราคา</div>
             <div class="row g-3 mb-4">
                 <div class="col-md-3">
@@ -294,7 +299,7 @@
                 </div>
             </div>
 
-            @* ── ส่วนที่ 3: ล็อตและวันหมดอายุ ── *@
+            <!-- ส่วนที่ 3: ล็อตและวันหมดอายุ -->
             <div class="section-header mb-3">ล็อตและวันหมดอายุ</div>
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
@@ -314,7 +319,7 @@
                 </div>
             </div>
 
-            @* ── ส่วนที่ 4: ข้อมูลเพิ่มเติม ── *@
+            <!-- ส่วนที่ 4: ข้อมูลเพิ่มเติม -->
             <div class="section-header mb-3">ข้อมูลเพิ่มเติม</div>
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
@@ -336,8 +341,8 @@
                 </div>
             </div>
 
-            @* ── ปุ่มบันทึกข้อมูล ── *@
-            <div class="d-flex gap-3 pt-2 border-top mt-2">
+            <!-- ปุ่มบันทึกข้อมูล -->
+            <div class="d-flex gap-3 pt-3 border-top mt-2">
                 @if (ViewBag.DuplicateFound == true)
                 {
                     <button type="submit" class="btn-save">
@@ -353,7 +358,6 @@
                 <a asp-action="Index" class="btn-cancel text-decoration-none">ยกเลิก</a>
             </div>
         </form>
-
     </div>
 </div>
 
@@ -363,43 +367,36 @@
     }
 
     <script>
-        // ฟังก์ชันเปลี่ยน Prefix ของรหัสสินค้า (MED / SUP)
         function updatePrefix() {
             const isMed = document.getElementById('typeMed').checked;
             const inputId = document.getElementById('medicine_id_input');
             const targetPrefix = isMed ? "MED" : "SUP";
 
-            // ดึง Label มาเพื่อจัดการสลับ Class สี
             const labelMed = document.getElementById('labelTypeMed');
             const labelSup = document.getElementById('labelTypeSup');
 
-            // สลับเฉพาะคำนำหน้า MED/SUP โดยคงตัวเลขด้านหลังไว้เหมือนเดิม
             if (inputId.value) {
                 inputId.value = inputId.value.replace(/^(MED|SUP)/i, targetPrefix);
             } else {
                 inputId.value = targetPrefix;
             }
 
-            // จัดการสีของ Text Input และ Label เมื่อสลับ Radio
             if (isMed) {
-                inputId.style.color = "#0d6efd"; // สีน้ำเงิน
+                inputId.style.color = "#2563EB";
                 labelMed.classList.replace("text-dark", "text-primary");
                 labelSup.classList.replace("text-primary", "text-dark");
             } else {
-                inputId.style.color = "#212529"; // สีเทาเข้ม
+                inputId.style.color = "#0F172A";
                 labelSup.classList.replace("text-dark", "text-primary");
                 labelMed.classList.replace("text-primary", "text-dark");
             }
         }
 
-        // ตรวจสอบและตั้งค่าเริ่มต้นเมื่อโหลดหน้าเว็บ
         document.addEventListener('DOMContentLoaded', function() {
             const inputId = document.getElementById('medicine_id_input');
-
             if (inputId.value) {
                 if (inputId.value.startsWith('SUP')) {
                     document.getElementById('typeSup').checked = true;
-                    // บังคับเรียกใช้เพื่อสลับสีให้ถูกต้อง
                     updatePrefix();
                 } else {
                     document.getElementById('typeMed').checked = true;

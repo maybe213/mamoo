@@ -3,24 +3,20 @@
 @{
     ViewData["Title"] = "ยืนยันการลบยา";
     Layout = "~/Views/Shared/_Layout.cshtml";
-}
-@{
+
     bool hasHistory = ViewBag.HasDispenseHistory ?? false;
     int currentStock = Model?.Stock ?? 0;
-
-    // ถ้ายาตัวนี้มีสต็อกเหลืออยู่ หรือ เคยทำรายการจ่ายยาไปแล้ว => ให้เลือก "ปิดใช้งาน"
     bool isSoftDeleteMode = (currentStock > 0 || hasHistory);
 }
 
 <style>
-    /* กฎข้อ 1: ใช้สีพื้นหลังและตัวอักษรที่ลดความล้าของสายตา (Eye Strain Prevention) */
     :root {
-        --app-bg: #F4F5F7; /* เทาอ่อน ลด Glare */
-        --card-bg: #F8F9FA; /* ขาวหม่น Off-white */
-        --text-main: #333333; /* เทาเข้ม Charcoal เลี่ยงสีดำสนิท */
-        --text-muted: #5A6268;
-        --color-primary: #026AA7; /* น้ำเงิน/ฟ้า สำหรับข้อมูลหลัก ดูสงบ */
-        /* กฎข้อ 2 & 3: สีแจ้งเตือนโทน Pastel และสีสำหรับการจัดหมวดหมู่ */
+        --primary-color: #2563EB;
+        --bg-main: #F8FAFC;
+        --card-bg: #FFFFFF;
+        --text-dark: #0F172A;
+        --text-muted: #64748B;
+        --border-color: #E2E8F0;
         --alert-warning-bg: #FFFBEB;
         --alert-warning-border: #F59E0B;
         --alert-warning-text: #92400E;
@@ -30,8 +26,8 @@
     }
 
     body {
-        background-color: var(--app-bg);
-        color: var(--text-main);
+        background-color: var(--bg-main);
+        color: var(--text-dark);
         font-family: 'Sarabun', sans-serif;
     }
 
@@ -42,16 +38,15 @@
 
     .card-clean {
         background-color: var(--card-bg);
-        border: 1px solid #E2E8F0;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
         overflow: hidden;
     }
 
-    /* กล่องแจ้งเตือน - กฎข้อ 4: ใช้ข้อความตัวหนาและไอคอนกำกับเสมอ */
     .alert-box {
         padding: 20px;
-        border-left: 6px solid;
+        border-left: 5px solid;
         display: flex;
         align-items: flex-start;
         gap: 15px;
@@ -71,22 +66,21 @@
     }
 
     .alert-icon {
-        font-size: 1.8rem;
+        font-size: 1.6rem;
         line-height: 1;
     }
 
-    /* การจัดกลุ่มข้อมูลตาม Law of Similarity */
     .info-container {
-        background-color: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 8px;
-        padding: 10px 20px;
+        background-color: #F8FAFC;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 8px 20px;
     }
 
     .info-row {
         display: flex;
         padding: 12px 0;
-        border-bottom: 1px solid #F1F5F9;
+        border-bottom: 1px solid var(--border-color);
     }
 
         .info-row:last-child {
@@ -97,20 +91,19 @@
         width: 35%;
         color: var(--text-muted);
         font-weight: 500;
-        font-size: 0.95rem;
+        font-size: 0.925rem;
     }
 
     .info-value {
         width: 65%;
-        color: var(--text-main);
+        color: var(--text-dark);
         font-weight: 600;
-        font-size: 1rem;
+        font-size: 0.975rem;
     }
 
-    /* ปุ่ม Action ตามหลักจิตวิทยาสี */
     .btn-action {
-        padding: 10px 24px;
-        border-radius: 6px;
+        padding: 10px 22px;
+        border-radius: 8px;
         font-weight: 600;
         border: none;
         cursor: pointer;
@@ -122,13 +115,15 @@
     }
 
     .btn-cancel {
-        background-color: #E2E8F0;
-        color: var(--text-main);
+        background-color: #FFFFFF;
+        border: 1px solid var(--border-color);
+        color: var(--text-dark);
         text-decoration: none;
     }
 
         .btn-cancel:hover {
-            background-color: #CBD5E1;
+            background-color: #F1F5F9;
+            color: var(--text-dark);
         }
 
     .btn-warning-action {
@@ -152,41 +147,38 @@
 
 <div class="delete-container">
     <div class="card-clean p-4">
-
-        <!-- กฎข้อ 4: ห้ามใช้สีอย่างเดียว ต้องมีไอคอน (⚠️ หรือ ❌) และข้อความตัวหนากำกับ -->
         @if (isSoftDeleteMode)
         {
-            <div class="alert-box alert-warning rounded">
+            <div class="alert-box alert-warning rounded-3">
                 <div class="alert-icon">⚠️</div>
                 <div>
                     <h5 class="fw-bold mb-1">คำเตือน: ต้องการปิดใช้งานเวชภัณฑ์?</h5>
-                    <p class="mb-0 fs-6">เนื่องจากยามีสต็อกคงเหลือหรือเคยมีประวัติการจ่ายยา ระบบจะทำการระงับการใช้งานแทนการลบถาวร</p>
+                    <p class="mb-0 fs-6 opacity-90">เนื่องจากยามีสต็อกคงเหลือหรือเคยมีประวัติการจ่ายยา ระบบจะทำการระงับการใช้งานแทนการลบถาวร</p>
                 </div>
             </div>
         }
         else
         {
-            <div class="alert-box alert-critical rounded">
+            <div class="alert-box alert-critical rounded-3">
                 <div class="alert-icon">❌</div>
                 <div>
                     <h5 class="fw-bold mb-1">วิกฤต: ยืนยันการลบข้อมูลถาวร?</h5>
-                    <p class="mb-0 fs-6">รายการนี้เป็นรายการเพิ่มผิด <strong>เมื่อลบแล้วจะไม่สามารถกู้คืนข้อมูลได้</strong></p>
+                    <p class="mb-0 fs-6 opacity-90">รายการนี้เป็นรายการเพิ่มผิด <strong>เมื่อลบแล้วจะไม่สามารถกู้คืนข้อมูลได้</strong></p>
                 </div>
             </div>
         }
 
-        <!-- กฎข้อ 3: จัดหมวดหมู่ข้อมูลด้วยพื้นหลังที่สบายตา แยกส่วนออกจากคำเตือนชัดเจน -->
         <div class="info-container mt-4 mb-4">
             <div class="info-row">
                 <div class="info-label">ชื่อยา / เวชภัณฑ์</div>
-                <div class="info-value" style="color: var(--color-primary); font-size: 1.1rem;">
+                <div class="info-value text-primary fs-6">
                     @Model?.Medicine_name
                 </div>
             </div>
 
             <div class="info-row">
                 <div class="info-label">รหัสยา (Item ID)</div>
-                <div class="info-value font-monospace">@Model?.Medicine_id</div>
+                <div class="info-value font-monospace"><code>@Model?.Medicine_id</code></div>
             </div>
 
             <div class="info-row">
@@ -207,8 +199,7 @@
             </div>
         </div>
 
-        <!-- โซนปุ่มกดยืนยัน -->
-        <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
             <a asp-action="Index" class="btn-action btn-cancel">
                 <i class="bi bi-arrow-left"></i> กลับหน้ารายการ
             </a>
@@ -231,7 +222,6 @@
                 }
             </form>
         </div>
-
     </div>
 </div>
 

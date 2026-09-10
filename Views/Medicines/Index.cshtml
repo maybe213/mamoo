@@ -3,11 +3,9 @@
 @{
     ViewData["Title"] = "คลังยาและเวชภัณฑ์";
 
-    // 🔹 รับค่าค้นหาและค่าการเรียงลำดับจาก Query String
     string currentSearch = Context.Request.Query["search"].ToString();
     string currentSort = ViewBag.CurrentSort as string ?? "id_asc";
 
-    // 🟢 กรองประเภท ยา / เวชภัณฑ์
     var rawSupplies = Model?.Where(m => m.Category?.Category_name != null
                                   && m.Category.Category_name.Contains("เวชภัณฑ์")).ToList()
                     ?? new List<DrugInventoryPro.Models.Medicines>();
@@ -15,7 +13,6 @@
     var rawMedicines = Model?.Where(m => !rawSupplies.Contains(m)).ToList()
                      ?? new List<DrugInventoryPro.Models.Medicines>();
 
-    // 🎯 ฟังก์ชันสำหรับเรียงลำดับข้อมูล
     IEnumerable<DrugInventoryPro.Models.Medicines> ApplySorting(IEnumerable<DrugInventoryPro.Models.Medicines> list, string sortBy)
     {
         return sortBy switch
@@ -27,7 +24,7 @@
             "low_stock" => list.OrderBy(m => m.Stock ?? 0),
             "expired_asc" => list.OrderBy(m => m.Expired_at.HasValue ? 0 : 1).ThenBy(m => m.Expired_at),
             "expired_desc" => list.OrderBy(m => m.Expired_at.HasValue ? 0 : 1).ThenByDescending(m => m.Expired_at),
-            _ => list.OrderBy(m => m.Medicine_id) // ค่าเริ่มต้น: เรียงตามรหัส
+            _ => list.OrderBy(m => m.Medicine_id)
         };
     }
 
@@ -37,98 +34,121 @@
 
 <style>
     :root {
-        --theme-primary: #0d6efd;
-        --theme-primary-hover: #0b5ed7;
-        --theme-dark: #212529;
-        --theme-light-bg: #f8f9fa;
-        --theme-hover-bg: #f1f8ff;
-        --theme-border: #dee2e6;
+        --primary-color: #2563EB;
+        --primary-hover: #1D4ED8;
+        --primary-light: #EFF6FF;
+        --bg-main: #F8FAFC;
+        --card-bg: #FFFFFF;
+        --text-dark: #0F172A;
+        --text-muted: #64748B;
+        --border-color: #E2E8F0;
+    }
+
+    body {
+        background-color: var(--bg-main);
+        color: var(--text-dark);
+        font-family: 'Sarabun', sans-serif;
+    }
+
+    .table-container {
+        width: 100%;
+        overflow: hidden;
+        background: var(--card-bg);
+        padding: 24px;
+        border-radius: 14px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+    }
+
+    .dashboard-wrapper {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        transition: max-width 0.25s ease-in-out;
     }
 
     .dash-table {
+        min-width: 720px;
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
     }
 
         .dash-table thead th {
-            background: var(--theme-dark);
-            color: #ffffff;
-            padding: 15px;
+            background: #F8FAFC;
+            color: var(--text-muted);
+            padding: 14px 16px;
             text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 1px;
+            font-size: 0.825rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
             white-space: nowrap;
         }
 
         .dash-table tbody tr {
-            transition: background-color 0.2s ease;
+            transition: background-color 0.15s ease;
         }
 
             .dash-table tbody tr:hover {
-                background: var(--theme-hover-bg);
+                background: var(--primary-light);
             }
 
         .dash-table td {
-            padding: 15px;
-            border-bottom: 1px solid var(--theme-border);
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
             vertical-align: middle;
+            font-size: 0.925rem;
             white-space: nowrap;
         }
 
     .btn-theme-edit {
-        background: var(--theme-dark);
-        color: #ffffff;
-        border: none;
+        background: #F1F5F9;
+        color: var(--text-dark);
+        border: 1px solid var(--border-color);
         transition: all 0.2s ease;
     }
 
         .btn-theme-edit:hover {
-            background: var(--theme-primary);
+            background: var(--primary-color);
             color: #ffffff;
+            border-color: var(--primary-color);
         }
 
     .btn-theme-del {
-        border: 1px solid #dc3545;
-        color: #dc3545;
-        background: transparent;
+        border: 1px solid #FECACA;
+        color: #EF4444;
+        background: #FEF2F2;
         transition: all 0.2s ease;
     }
 
         .btn-theme-del:hover {
-            background: #dc3545;
+            background: #EF4444;
             color: #ffffff;
+            border-color: #EF4444;
         }
-
-    .table-container {
-        background: #ffffff;
-        padding: 25px;
-        border-radius: 16px;
-        border: 1px solid var(--theme-border);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-    }
 </style>
 
-<div class="dashboard-wrapper mt-4">
-    <div class="page-title mb-4 fw-bold fs-4 text-dark">
+<div class="dashboard-wrapper mt-4 px-3 px-md-4">
+    <div class="page-title mb-4 fw-bold fs-4 text-dark d-flex align-items-center gap-2">
         <i class="bi bi-capsule text-primary"></i> คลังยาและเวชภัณฑ์
     </div>
 
-    <!-- 🔹 Tab แยกประเภท ยา / เวชภัณฑ์ -->
-    <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+    <!-- Navigation Pills -->
+    <ul class="nav nav-pills mb-3 gap-2" id="pills-tab" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active fw-bold" id="pills-medicine-tab" data-bs-toggle="pill" data-bs-target="#pills-medicine" type="button" role="tab">
+            <button class="nav-link active fw-bold rounded-pill px-3" id="pills-medicine-tab" data-bs-toggle="pill" data-bs-target="#pills-medicine" type="button" role="tab">
                 💊 รายการยา (@medicines.Count)
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link fw-bold" id="pills-supply-tab" data-bs-toggle="pill" data-bs-target="#pills-supply" type="button" role="tab">
+            <button class="nav-link fw-bold rounded-pill px-3" id="pills-supply-tab" data-bs-toggle="pill" data-bs-target="#pills-supply" type="button" role="tab">
                 🩹 รายการเวชภัณฑ์ (@supplies.Count)
             </button>
         </li>
     </ul>
 
-    @* แจ้งเตือนข้อผิดพลาด *@
     @if (TempData["ErrorMessage"] != null)
     {
         <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm rounded-3 mb-4" role="alert">
@@ -140,7 +160,6 @@
         </div>
     }
 
-    @* แจ้งเตือนทำรายการสำเร็จ *@
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm rounded-3 mb-4" role="alert">
@@ -154,26 +173,25 @@
 
     <div class="table-container">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <h5 class="fw-bold mb-0 text-dark">รายการยาในคลังปัจจุบัน</h5>
+            <h5 class="fw-bold mb-0 text-dark">รายการสินค้าทั้งหมด</h5>
 
             <div class="d-flex gap-2">
-                <a asp-controller="Settings" asp-action="Index" class="btn btn-outline-secondary btn-sm d-flex align-items-center">
+                <a asp-controller="Settings" asp-action="Index" class="btn btn-outline-secondary btn-sm d-flex align-items-center rounded-2">
                     <i class="bi bi-gear me-1"></i> เพิ่มหมวดหมู่/ หน่วยนับ
                 </a>
-                <a asp-action="Create" class="btn btn-primary btn-sm d-flex align-items-center fw-bold">
+                <a asp-action="Create" class="btn btn-primary btn-sm d-flex align-items-center fw-semibold rounded-2">
                     <i class="bi bi-plus-lg me-1"></i> เพิ่มรายการใหม่
                 </a>
             </div>
         </div>
 
-        <!-- 🔹 ฟอร์มค้นหา และ ตัวเลือกการเรียงลำดับ -->
+        <!-- Search & Filter Controls -->
         <form method="get" asp-action="Index" class="mb-3">
             <div class="row g-2">
-                <!-- ช่องค้นหา -->
-                <div class="col-md-7 col-12">
+                <div class="col-lg-7 col-md-6 col-12">
                     <div class="input-group">
-                        <input type="text" name="search" class="form-control" placeholder="ค้นหาด้วยรหัส หรือชื่อเวชภัณฑ์ยา..." value="@currentSearch" />
-                        <button type="submit" class="btn btn-dark"><i class="bi bi-search me-1"></i> ค้นหา</button>
+                        <input type="text" name="search" class="form-control rounded-start-2 border-end-0" placeholder="ค้นหาด้วยรหัส หรือชื่อเวชภัณฑ์ยา..." value="@currentSearch" />
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i> ค้นหา</button>
                         @if (!string.IsNullOrEmpty(currentSearch))
                         {
                             <a asp-action="Index" class="btn btn-outline-secondary" title="ล้างการค้นหา"><i class="bi bi-x-lg"></i></a>
@@ -181,26 +199,22 @@
                     </div>
                 </div>
 
-                <!-- ตัวเลือกการเรียงลำดับ (Sorting) -->
-                <div class="col-md-5 col-12">
-                    <div class="input-group">
-                        <select name="sortBy" class="form-select" onchange="this.form.submit()">
-                            <option value="id_asc" selected="@(currentSort == "id_asc" || string.IsNullOrEmpty(currentSort))">รหัส (น้อยไปมาก)</option>
-                            <option value="id_desc" selected="@(currentSort == "id_desc")">รหัส (มากไปน้อย)</option>
-                            <option value="stock_desc" selected="@(currentSort == "stock_desc")">จำนวนสต็อก (มากไปน้อย)</option>
-                            <option value="stock_asc" selected="@(currentSort == "stock_asc")">จำนวนสต็อก (น้อยไปมาก)</option>
-                            <option value="low_stock" selected="@(currentSort == "low_stock")">สต็อกต่ำกว่าเกณฑ์ก่อน</option>
-                            <option value="expired_asc" selected="@(currentSort == "expired_asc")">วันหมดอายุ (หมดอายุก่อน - หลัง)</option>
-                            <option value="expired_desc" selected="@(currentSort == "expired_desc")">วันหมดอายุ (หมดอายุหลัง - ก่อน)</option>
-                        </select>
-                    </div>
+                <div class="col-lg-5 col-md-6 col-12">
+                    <select name="sortBy" class="form-select rounded-2" onchange="this.form.submit()">
+                        <option value="id_asc" selected="@(currentSort == "id_asc" || string.IsNullOrEmpty(currentSort))">รหัส (น้อยไปมาก)</option>
+                        <option value="id_desc" selected="@(currentSort == "id_desc")">รหัส (มากไปน้อย)</option>
+                        <option value="stock_desc" selected="@(currentSort == "stock_desc")">จำนวนสต็อก (มากไปน้อย)</option>
+                        <option value="stock_asc" selected="@(currentSort == "stock_asc")">จำนวนสต็อก (น้อยไปมาก)</option>
+                        <option value="low_stock" selected="@(currentSort == "low_stock")">สต็อกต่ำกว่าเกณฑ์ก่อน</option>
+                        <option value="expired_asc" selected="@(currentSort == "expired_asc")">วันหมดอายุ (หมดอายุก่อน - หลัง)</option>
+                        <option value="expired_desc" selected="@(currentSort == "expired_desc")">วันหมดอายุ (หมดอายุหลัง - ก่อน)</option>
+                    </select>
                 </div>
             </div>
         </form>
 
-        <!-- 🔹 Tab Content สลับหน้าตาราง -->
+        <!-- Tab Contents -->
         <div class="tab-content" id="pills-tabContent">
-
             <!-- 1. ตารางรายการยา -->
             <div class="tab-pane fade show active" id="pills-medicine" role="tabpanel">
                 <div class="table-responsive">
@@ -221,7 +235,7 @@
                             {
                                 <tr>
                                     <td colspan="7" class="text-center py-5 text-muted">
-                                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary opacity-50"></i>
                                         ไม่พบรายการยาในระบบคลัง
                                     </td>
                                 </tr>
@@ -231,22 +245,27 @@
                                 @foreach (var item in medicines)
                                 {
                                     <tr>
-                                        <td><small class="text-muted fw-bold">@item.Medicine_id</small></td>
+                                        <td><code>@item.Medicine_id</code></td>
                                         <td class="fw-bold text-dark">@item.Medicine_name</td>
                                         <td class="text-center">
-                                            <span class="badge rounded-pill px-3 py-2" style="background:@(item.Stock < 10 ? "#dc3545" : "#6c757d")">
-                                                @item.Stock
-                                            </span>
+                                            @if ((item.Stock ?? 0) < 10)
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1.5 rounded-pill fw-bold">@item.Stock</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-pill fw-medium">@item.Stock</span>
+                                            }
                                         </td>
-                                        <td><code class="text-primary fw-bold">@item.Lot</code></td>
+                                        <td><span class="text-primary fw-semibold">@item.Lot</span></td>
                                         <td>@(item.Expired_at.HasValue? item.Expired_at.Value.ToString("dd/MM/yyyy") : "-")</td>
-                                        <td>@item.Price.ToString("N2") ฿</td>
+                                        <td class="fw-medium">@item.Price.ToString("N2") ฿</td>
                                         <td class="text-center">
                                             <div class="d-inline-flex gap-1">
-                                                <a asp-action="Edit" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-edit" title="แก้ไข">
+                                                <a asp-action="Edit" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-edit rounded-2" title="แก้ไข">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </a>
-                                                <a asp-action="Delete" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-del" title="ลบข้อมูล">
+                                                <a asp-action="Delete" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-del rounded-2" title="ลบข้อมูล">
                                                     <i class="bi bi-trash"></i>
                                                 </a>
                                             </div>
@@ -279,7 +298,7 @@
                             {
                                 <tr>
                                     <td colspan="7" class="text-center py-5 text-muted">
-                                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary opacity-50"></i>
                                         ไม่พบรายการเวชภัณฑ์ในระบบคลัง
                                     </td>
                                 </tr>
@@ -289,22 +308,27 @@
                                 @foreach (var item in supplies)
                                 {
                                     <tr>
-                                        <td><small class="text-muted fw-bold">@item.Medicine_id</small></td>
+                                        <td><code>@item.Medicine_id</code></td>
                                         <td class="fw-bold text-dark">@item.Medicine_name</td>
                                         <td class="text-center">
-                                            <span class="badge rounded-pill px-3 py-2" style="background:@(item.Stock < 10 ? "#dc3545" : "#6c757d")">
-                                                @item.Stock
-                                            </span>
+                                            @if ((item.Stock ?? 0) < 10)
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1.5 rounded-pill fw-bold">@item.Stock</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-pill fw-medium">@item.Stock</span>
+                                            }
                                         </td>
-                                        <td><code class="text-primary fw-bold">@item.Lot</code></td>
+                                        <td><span class="text-primary fw-semibold">@item.Lot</span></td>
                                         <td>@(item.Expired_at.HasValue? item.Expired_at.Value.ToString("dd/MM/yyyy") : "-")</td>
-                                        <td>@item.Price.ToString("N2") ฿</td>
+                                        <td class="fw-medium">@item.Price.ToString("N2") ฿</td>
                                         <td class="text-center">
                                             <div class="d-inline-flex gap-1">
-                                                <a asp-action="Edit" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-edit" title="แก้ไข">
+                                                <a asp-action="Edit" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-edit rounded-2" title="แก้ไข">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </a>
-                                                <a asp-action="Delete" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-del" title="ลบข้อมูล">
+                                                <a asp-action="Delete" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-del rounded-2" title="ลบข้อมูล">
                                                     <i class="bi bi-trash"></i>
                                                 </a>
                                             </div>

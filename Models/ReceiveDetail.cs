@@ -25,7 +25,7 @@ namespace DrugInventoryPro.Models
         public string? SheetName { get; set; }
 
         // =============================================================
-        // 🛠️ พร็อพเพอร์ตี้ชั่วคราวสำหรับอ่านจาก Excel และส่งไปหน้า View (ไม่ลง DB)
+        // พร็อพเพอร์ตี้ชั่วคราวสำหรับอ่านจาก Excel และแสดงผล (NotMapped)
         // =============================================================
         [NotMapped]
         public string? Medicine_name { get; set; }
@@ -39,17 +39,25 @@ namespace DrugInventoryPro.Models
         [NotMapped]
         public string? Account_Type { get; set; }
 
+        [NotMapped]
+        public string? Unit_id { get; set; }
 
         [NotMapped]
-        public string ActionType { get; set; } = "AddNew"; // AddNew, UpdateExisting, DisableOldAndAddNew
+        public int Stock { get; set; }
 
         [NotMapped]
-        public string? MatchedMedicineId { get; set; } // รหัสเดิมที่ตรวจเจอว่าซ้ำ
+        public string? Remark { get; set; }
 
         [NotMapped]
-        public string? MatchedMedicineName { get; set; } // ชื่อเดิมที่ตรวจเจอว่าซ้ำ
+        public string ActionType { get; set; } = "AddNew";
 
         [NotMapped]
-        public bool IsDuplicateOrSimilar { get; set; } = false; // สถานะบอกว่าเจอรายการซ้ำหรือไม่
+        public string? MatchedMedicineId { get; set; }
+
+        [NotMapped]
+        public string? MatchedMedicineName { get; set; }
+
+        [NotMapped]
+        public bool IsDuplicateOrSimilar { get; set; } = false;
     }
 }

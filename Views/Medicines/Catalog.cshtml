@@ -8,6 +8,8 @@
     :root {
         --primary-color: #2563EB;
         --primary-hover: #1D4ED8;
+        --primary-light: #EFF6FF;
+        --primary-border: #BFDBFE;
         --bg-main: #F8FAFC;
         --card-bg: #FFFFFF;
         --text-dark: #0F172A;
@@ -23,9 +25,9 @@
 
     code {
         font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        color: #334155;
+        color: #1E293B;
         background-color: #F1F5F9;
-        border: 1px solid #CBD5E1;
+        border: 1px solid var(--border-color);
         padding: 4px 10px;
         border-radius: 6px;
         font-size: 0.85rem;
@@ -38,7 +40,7 @@
         background: var(--card-bg);
         border: 1px solid var(--border-color);
         border-radius: 14px;
-        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
     }
 
     .nav-tabs-custom {
@@ -59,13 +61,13 @@
 
             .nav-tabs-custom .nav-link:hover {
                 color: var(--primary-color);
-                background-color: #F1F5F9;
+                background-color: var(--primary-light);
             }
 
             .nav-tabs-custom .nav-link.active {
                 color: var(--primary-color);
                 border-bottom-color: var(--primary-color);
-                background-color: #FFFFFF;
+                background-color: var(--card-bg);
                 font-weight: 700;
             }
 
@@ -79,8 +81,8 @@
     }
 
     .nav-link.active .tab-badge {
-        background-color: #DBEAFE;
-        color: var(--primary-color);
+        background-color: var(--primary-border);
+        color: var(--primary-hover);
     }
 
     .table-modern {
@@ -92,7 +94,7 @@
         }
 
             .table-modern thead th {
-                color: #475569;
+                color: var(--text-muted);
                 font-weight: 700;
                 font-size: 0.825rem;
                 text-transform: uppercase;
@@ -106,7 +108,7 @@
         }
 
             .table-modern tbody tr:hover {
-                background-color: #F1F5F9;
+                background-color: var(--primary-light);
             }
 
         .table-modern td {
@@ -117,7 +119,7 @@
         }
 
     .search-box input {
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.02);
         transition: all 0.2s ease;
     }
 
@@ -138,10 +140,21 @@
             <p class="text-muted small mb-0">แคตตาล็อกแสดงรายการสินค้าทั้งหมดและจำนวนคงเหลือในคลัง</p>
         </div>
 
-        <!-- Search Bar -->
-        <div class="search-box position-relative" style="max-width: 320px; width: 100%;">
-            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-            <input type="text" id="inventorySearch" class="form-control ps-5 rounded-pill border-secondary-subtle" placeholder="ค้นหาชื่อหรือรหัส...">
+        <!-- Search Bar & Sort Dropdown -->
+        <div class="d-flex align-items-center gap-2 flex-wrap flex-md-nowrap" style="max-width: 540px; width: 100%;">
+            <div class="search-box position-relative flex-grow-1">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                <input type="text" id="inventorySearch" class="form-control ps-5 rounded-pill border-secondary-subtle" placeholder="ค้นหาชื่อหรือรหัส...">
+            </div>
+
+            <div style="min-width: 200px;">
+                <select id="sortSelect" class="form-select rounded-pill border-secondary-subtle shadow-sm">
+                    <option value="id_asc" selected="@(ViewBag.CurrentSort == "id_asc")">เรียงตามรหัส</option>
+                    <option value="fefo" selected="@(ViewBag.CurrentSort == "fefo")">เรียงตาม FEFO (วันหมดอายุ)</option>
+                    <option value="stock_asc" selected="@(ViewBag.CurrentSort == "stock_asc")">เรียงตามสต็อก (น้อยไปมาก)</option>
+                    <option value="stock_desc" selected="@(ViewBag.CurrentSort == "stock_desc")">เรียงตามสต็อก (มากไปน้อย)</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -165,7 +178,6 @@
 
     <!-- Tab Contents -->
     <div class="tab-content mt-3" id="inventoryTabsContent">
-        <!-- Tab 1: รายการยา -->
         <div class="tab-pane fade show active" id="medicines-pane" role="tabpanel">
             <div class="inventory-card overflow-hidden">
                 @{
@@ -173,8 +185,6 @@
                 }
             </div>
         </div>
-
-        <!-- Tab 2: รายการเวชภัณฑ์ -->
         <div class="tab-pane fade" id="supplies-pane" role="tabpanel">
             <div class="inventory-card overflow-hidden">
                 @{
@@ -185,7 +195,6 @@
     </div>
 </div>
 
-@* Local Helper Function สำหรับเรนเดอร์ตาราง *@
 @{
     async Task RenderInventoryTable(IEnumerable<DrugInventoryPro.Models.Medicines>? items, string categoryLabel)
     {
@@ -194,9 +203,10 @@
                 <thead>
                     <tr>
                         <th class="ps-4" style="width: 15%;">รหัส @categoryLabel</th>
-                        <th style="width: 40%;">ชื่อ @categoryLabel</th>
-                        <th style="width: 25%;">หมวดหมู่ / สรรพคุณ</th>
-                        <th class="text-center" style="width: 20%;">สต็อกคงเหลือ</th>
+                        <th style="width: 30%;">ชื่อ @categoryLabel</th>
+                        <th style="width: 20%;">หมวดหมู่ / สรรพคุณ</th>
+                        <th class="text-center" style="width: 17%;">วันหมดอายุ</th>
+                        <th class="text-center" style="width: 18%;">สต็อกคงเหลือ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -207,8 +217,12 @@
                             var stock = item.Stock ?? 0;
                             var rop = item.Quantity ?? 0;
                             var unit = item.MedicineUnit?.Unit_name ?? "";
+                            var expDateStr = item.Expired_at.HasValue ? item.Expired_at.Value.ToString("yyyy-MM-dd") : "9999-12-31";
 
-                            <tr class="item-row">
+                            <tr class="item-row"
+                                data-id="@(item.Medicine_id ?? "")"
+                                data-expiry="@expDateStr"
+                                data-stock="@stock">
                                 <td class="ps-4">
                                     <code>@item.Medicine_id</code>
                                 </td>
@@ -219,6 +233,36 @@
                                     <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-2">
                                         @(item.Category?.Category_name ?? item.Account_Type ?? "-")
                                     </span>
+                                </td>
+                                <td class="text-center">
+                                    @if (item.Expired_at.HasValue)
+                                    {
+                                        var isExpired = item.Expired_at.Value.Date <= DateTime.Today;
+                                        var isExpiringSoon = !isExpired && item.Expired_at.Value.Date <= DateTime.Today.AddDays(30);
+
+                                        if (isExpired)
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 rounded-2">
+                                                <i class="bi bi-calendar-x me-1"></i>@item.Expired_at.Value.ToString("dd/MM/yyyy")
+                                            </span>
+                                        }
+                                        else if (isExpiringSoon)
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1 rounded-2 fw-semibold">
+                                                <i class="bi bi-exclamation-circle me-1"></i>@item.Expired_at.Value.ToString("dd/MM/yyyy")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-secondary small fw-medium">
+                                                <i class="bi bi-calendar-event me-1 text-muted"></i>@item.Expired_at.Value.ToString("dd/MM/yyyy")
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">-</span>
+                                    }
                                 </td>
                                 <td class="text-center">
                                     @if (stock <= 0)
@@ -246,7 +290,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="4" class="text-center py-5 text-muted">
+                            <td colspan="5" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
                                 <span>ไม่พบข้อมูลรายการ @categoryLabel ในระบบ</span>
                             </td>
@@ -258,10 +302,10 @@
     }
 }
 
-@* Client-side Search Script *@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const searchInput = document.getElementById("inventorySearch");
+        const sortSelect = document.getElementById("sortSelect");
 
         function filterItems() {
             const filter = searchInput.value.toLowerCase();
@@ -275,11 +319,50 @@
             });
         }
 
+        function sortItems() {
+            const sortVal = sortSelect.value;
+            const tables = document.querySelectorAll(".inventory-table");
+
+            tables.forEach(table => {
+                const tbody = table.querySelector("tbody");
+                if (!tbody) return;
+
+                const rows = Array.from(tbody.querySelectorAll("tr.item-row"));
+
+                rows.sort((a, b) => {
+                    const stockA = parseInt(a.getAttribute("data-stock")) || 0;
+                    const stockB = parseInt(b.getAttribute("data-stock")) || 0;
+                    const expA = a.getAttribute("data-expiry");
+                    const expB = b.getAttribute("data-expiry");
+                    const idA = a.getAttribute("data-id");
+                    const idB = b.getAttribute("data-id");
+
+                    if (sortVal === "stock_asc") {
+                        return stockA - stockB || idA.localeCompare(idB);
+                    } else if (sortVal === "stock_desc") {
+                        return stockB - stockA || idA.localeCompare(idB);
+                    } else if (sortVal === "fefo") {
+                        if (expA !== expB) return expA.localeCompare(expB);
+                        return idA.localeCompare(idB);
+                    } else {
+                        return idA.localeCompare(idB);
+                    }
+                });
+
+                rows.forEach(row => tbody.appendChild(row));
+            });
+        }
+
         searchInput.addEventListener("keyup", filterItems);
+        sortSelect.addEventListener("change", sortItems);
 
         const tabLinks = document.querySelectorAll('button[data-bs-toggle="tab"]');
         tabLinks.forEach(tab => {
-            tab.addEventListener('shown.bs.tab', filterItems);
+            tab.addEventListener('shown.bs.tab', function () {
+                filterItems();
+            });
         });
+
+        sortItems();
     });
 </script>

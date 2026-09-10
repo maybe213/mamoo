@@ -5,172 +5,34 @@
     var invoiceNo = ViewBag.InvoiceNo as string ?? "-";
     var receivedBy = ViewBag.ReceivedBy as string ?? "-";
     var importType = ViewBag.ImportType as string ?? "MED";
-    var rawDocumentTitle = ViewBag.DocumentTitle as string ?? "ใบเบิกเวชภัณฑ์ยา (ยาทั่วไป) รพ.สต.";
+    var rawDocumentTitle = ViewBag.DocumentTitle as string ?? "";
     var documentTitle = rawDocumentTitle?.TrimEnd(',', ' ');
     var duplicateCount = Model.Count(m => m.IsDuplicateOrSimilar);
 }
 
-<style>
-    :root {
-        --his-dark: #0F172A;
-        --his-primary: #0284C7;
-        --his-primary-hover: #0369A1;
-        --his-success: #10B981;
-        --his-warning: #F59E0B;
-        --his-danger: #EF4444;
-        --his-bg: #F8FAFC;
-        --his-card: #FFFFFF;
-        --his-border: #E2E8F0;
-        --his-text: #1E293B;
-        --his-muted: #64748B;
-    }
-
-    body {
-        background-color: var(--his-bg);
-        font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        color: var(--his-text);
-    }
-
-    .preview-card {
-        border: 1px solid var(--his-border);
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-        background-color: var(--his-card);
-    }
-
-    .preview-header-banner {
-        background: linear-gradient(135deg, var(--his-dark) 0%, #1E293B 100%);
-        color: #ffffff;
-        border-top-left-radius: 12px;
-        border-top-right-radius: 12px;
-        padding: 1.25rem 1.5rem;
-    }
-
-    .summary-kpi-card {
-        border: 1px solid var(--his-border);
-        border-radius: 10px;
-        padding: 1rem 1.25rem;
-        background-color: #FFFFFF;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-    }
-
-    .summary-kpi-title {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        font-weight: 700;
-        color: var(--his-muted);
-        letter-spacing: 0.5px;
-    }
-
-    .summary-kpi-value {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: var(--his-dark);
-        margin-top: 0.25rem;
-    }
-
-    /* Table Formatting */
-    .table-preview {
-        font-size: 0.85rem;
-        margin-bottom: 0;
-    }
-
-        .table-preview thead th {
-            background-color: #1E293B;
-            color: #F8FAFC;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.5px;
-            padding: 12px 10px;
-            vertical-align: middle;
-            white-space: nowrap;
-            border: none;
-        }
-
-        .table-preview tbody td {
-            padding: 8px 10px;
-            vertical-align: middle;
-            border-bottom: 1px solid var(--his-border);
-        }
-
-        .table-preview tbody tr:hover {
-            background-color: #F1F5F9;
-        }
-
-    /* Form Controls */
-    .form-control-sm, .form-select-sm {
-        font-size: 0.825rem;
-        border-radius: 6px;
-        border: 1px solid #CBD5E1;
-        padding: 0.35rem 0.5rem;
-    }
-
-        .form-control-sm:focus, .form-select-sm:focus {
-            border-color: var(--his-primary);
-            box-shadow: 0 0 0 0.2rem rgba(2, 132, 199, 0.15);
-        }
-
-    .row-number {
-        font-weight: 700;
-        color: var(--his-muted);
-        text-align: center;
-    }
-</style>
-
 <div class="container-fluid py-4">
     <div class="preview-card mb-4">
-        <!-- 1. Header Banner -->
         <div class="preview-header-banner d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
-                <h4 class="fw-bold mb-1"><i class="bi bi-file-earmark-medical-fill me-2 text-info"></i>ตรวจสอบและนำเข้าข้อมูลรับยาเข้าคลัง (HIS Module)</h4>
+                <h4 class="fw-bold mb-1"><i class="bi bi-file-earmark-medical-fill me-2 text-info"></i>ตรวจสอบข้อมูลนำเข้า (@importType)</h4>
                 <p class="mb-0 text-light opacity-75 small">
-                    <i class="bi bi-journal-text me-1"></i> เอกสาร: <strong>@documentTitle</strong> |
-                    <i class="bi bi-receipt me-1"></i> เลขที่ใบส่งของ/อ้างอิง: <strong>@invoiceNo</strong> |
-                    <i class="bi bi-person-check me-1"></i> ผู้รับเข้า: <strong>@receivedBy</strong>
+                    เอกสาร: <strong>@documentTitle</strong> | ใบส่งของ: <strong>@invoiceNo</strong> | ผู้รับ: <strong>@receivedBy</strong>
                 </p>
             </div>
             <span class="badge bg-info text-dark font-monospace fs-6 px-3 py-2">
-                <i class="bi bi-cloud-arrow-up-fill me-1"></i> ประเภท: @importType
+                ประเภท: @importType
             </span>
         </div>
 
         <div class="card-body p-4">
-            <!-- 2. KPI Summary Dashboard -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-3 col-sm-6">
-                    <div class="summary-kpi-card border-start border-4 border-primary">
-                        <div class="summary-kpi-title">รายการยาทั้งหมด</div>
-                        <div class="summary-kpi-value text-primary" id="kpiTotalItems">@Model.Count <span class="fs-6 fw-normal text-muted">รายการ</span></div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="summary-kpi-card border-start border-4 border-success">
-                        <div class="summary-kpi-title">จำนวนรับเข้ารวม</div>
-                        <div class="summary-kpi-value text-success" id="kpiTotalQty">
-                            @Model.Sum(x => x.Quantity_received).ToString("N0") <span class="fs-6 fw-normal text-muted">หน่วย</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="summary-kpi-card border-start border-4 border-info">
-                        <div class="summary-kpi-title">มูลค่ารวมประมาณการ</div>
-                        <div class="summary-kpi-value text-info" id="kpiTotalAmount">
-                            @Model.Sum(x => x.Quantity_received * (x.Price ?? 0)).ToString("N2") <span class="fs-6 fw-normal text-muted">บาท</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="summary-kpi-card border-start border-4 border-warning">
-                        <div class="summary-kpi-title">พบรายการซ้ำในคลัง</div>
-                        <div class="summary-kpi-value text-warning">
-                            @duplicateCount <span class="fs-6 fw-normal text-muted">รายการ</span>
-                        </div>
-                    </div>
-                </div>
+            <!-- ปุ่มจัดการเลือกหลายรายการ -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="fw-bold text-secondary">รายการทั้งหมด: <span id="kpiTotalItems">@Model.Count</span> รายการ</div>
+                <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="deleteSelectedRows()">
+                    <i class="bi bi-trash-fill me-1"></i> ลบรายการที่เลือก (<span id="selectedCount">0</span>)
+                </button>
             </div>
 
-            <!-- 3. Form Table -->
             <form asp-action="ConfirmReceive" method="post" id="receiveConfirmForm">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="invoiceNo" value="@invoiceNo" />
@@ -182,15 +44,18 @@
                     <table class="table table-hover align-middle table-preview" id="previewTable">
                         <thead>
                             <tr>
+                                <th style="width: 3%;" class="text-center">
+                                    <input type="checkbox" id="selectAll" class="form-check-input" onchange="toggleSelectAll(this)" />
+                                </th>
                                 <th style="width: 3%;" class="text-center">#</th>
-                                <th style="width: 22%;">ชื่อรายการยา / บรรจุภัณฑ์</th>
-                                <th style="width: 8%;" class="text-center">บัญชี</th>
+                                <th style="width: 22%;">รายการ / บรรจุภัณฑ์</th>
+                                <th style="width: 8%;" class="text-center">ประเภท/บัญชี</th>
                                 <th style="width: 9%;" class="text-end">จำนวนรับ</th>
                                 <th style="width: 10%;" class="text-end">ราคา/หน่วย</th>
-                                <th style="width: 11%;" class="text-end">ราคารวม (บาท)</th>
+                                <th style="width: 11%;" class="text-end">ราคารวม</th>
                                 <th style="width: 10%;">LOT NUMBER</th>
                                 <th style="width: 11%;">วันหมดอายุ</th>
-                                <th style="width: 13%;">สถานะ & การจัดการ</th>
+                                <th style="width: 10%;">หมายเหตุ</th>
                                 <th style="width: 3%;" class="text-center">ลบ</th>
                             </tr>
                         </thead>
@@ -200,73 +65,56 @@
                                 var item = Model[i];
                                 var rowTotal = item.Quantity_received * (item.Price ?? 0);
                                 <tr>
-                                    <input type="hidden" name="items.Index" value="@i" />
+                                    <!-- Checkbox เลือกรายการ -->
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input row-checkbox" onchange="updateSelectedCount()" />
+                                    </td>
+
+                                    <input type="hidden" name="items.Index" value="@i" class="item-index" />
                                     <input type="hidden" name="items[@i].MatchedMedicineId" value="@item.MatchedMedicineId" />
                                     <input type="hidden" name="items[@i].MatchedMedicineName" value="@item.MatchedMedicineName" />
                                     <input type="hidden" name="items[@i].IsDuplicateOrSimilar" value="@item.IsDuplicateOrSimilar.ToString().ToLower()" />
                                     <input type="hidden" name="items[@i].SheetName" value="@item.SheetName" />
+                                    <input type="hidden" name="items[@i].Unit_id" value="@item.Unit_id" />
+                                    <input type="hidden" name="items[@i].Remark" value="@item.Remark" />
 
-                                    <!-- ลำดับ -->
                                     <td class="row-number">@(i + 1)</td>
 
-                                    <!-- ชื่อยา + ขนาดบรรจุ -->
                                     <td>
-                                        <input type="text" name="items[@i].Medicine_name" value="@item.Medicine_name" class="form-control form-control-sm fw-bold text-dark mb-1" required placeholder="ชื่อยา/เวชภัณฑ์" />
-                                        <input type="text" name="items[@i].Packing_Size" value="@item.Packing_Size" class="form-control form-control-sm text-muted" placeholder="ความแรง / ขนาดบรรจุ" />
+                                        <input type="text" name="items[@i].Medicine_name" value="@item.Medicine_name" class="form-control form-control-sm fw-bold text-dark mb-1" required />
+                                        <input type="text" name="items[@i].Packing_Size" value="@item.Packing_Size" class="form-control form-control-sm text-muted" placeholder="ขนาดบรรจุ" />
                                     </td>
 
-                                    <!-- ประเภทบัญชียา -->
                                     <td class="text-center">
-                                        <input type="text" name="items[@i].Account_Type" value="@item.Account_Type" class="form-control form-control-sm text-center font-monospace fw-bold" placeholder="ED/NED" />
+                                        <input type="text" name="items[@i].Account_Type" value="@item.Account_Type" class="form-control form-control-sm text-center font-monospace fw-bold" />
                                     </td>
 
-                                    <!-- จำนวนเบิก/รับเข้า -->
                                     <td>
-                                        <input type="number" name="items[@i].Quantity_received" value="@item.Quantity_received" class="form-control form-control-sm text-end fw-bold text-primary qty-input" min="1" required onchange="recalculateRow(this)" />
+                                        <input type="number" name="items[@i].Quantity_received" value="@item.Quantity_received" class="form-control form-control-sm text-end fw-bold text-primary qty-input" min="0" onchange="recalculateRow(this)" />
                                     </td>
 
-                                    <!-- ราคาต่อหน่วย -->
                                     <td>
-                                        <input type="number" step="0.01" name="items[@i].Price" value="@(item.Price?.ToString("F2") ?? "0.00")" class="form-control form-control-sm text-end price-input" placeholder="0.00" onchange="recalculateRow(this)" />
+                                        <input type="number" step="0.01" name="items[@i].Price" value="@(item.Price?.ToString("F2") ?? "0.00")" class="form-control form-control-sm text-end price-input" onchange="recalculateRow(this)" />
                                     </td>
 
-                                    <!-- ราคารวมคำนวณ -->
                                     <td class="text-end fw-bold text-dark row-total-val">
                                         @rowTotal.ToString("N2")
                                     </td>
 
-                                    <!-- Lot Number -->
                                     <td>
-                                        <input type="text" name="items[@i].Lot_number" value="@(string.IsNullOrEmpty(item.Lot_number) ? "-" : item.Lot_number)" class="form-control form-control-sm font-monospace" required placeholder="เลข Lot" />
+                                        <input type="text" name="items[@i].Lot_number" value="@(string.IsNullOrEmpty(item.Lot_number) ? "-" : item.Lot_number)" class="form-control form-control-sm font-monospace" />
                                     </td>
 
-                                    <!-- วันหมดอายุ -->
                                     <td>
-                                        <input type="date" name="items[@i].Expiry_date" value="@item.Expiry_date.ToString("yyyy-MM-dd")" class="form-control form-control-sm" required />
+                                        <input type="date" name="items[@i].Expiry_date" value="@item.Expiry_date.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
                                     </td>
 
-                                    <!-- สถานะรายการซ้ำและการจัดการ -->
                                     <td>
-                                        @if (item.IsDuplicateOrSimilar)
-                                        {
-                                            <div class="badge bg-warning text-dark mb-1 w-100 text-wrap text-start">
-                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>ซ้ำ: @item.MatchedMedicineName
-                                            </div>
-                                            <select name="items[@i].ActionType" class="form-select form-select-sm fw-bold border-warning">
-                                                <option value="UpdateExisting" selected>อัปเดตสต็อกเดิม</option>
-                                                <option value="AddNew">สร้างเป็น ID ยาใหม่</option>
-                                            </select>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="bi bi-plus-circle me-1"></i>รายการใหม่</span>
-                                            <input type="hidden" name="items[@i].ActionType" value="AddNew" />
-                                        }
+                                        <small class="text-muted">@(string.IsNullOrEmpty(item.Remark) ? "-" : item.Remark)</small>
                                     </td>
 
-                                    <!-- ปุ่มลบแถว -->
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeRow(this)" title="ลบรายการนี้">
+                                        <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeRow(this)">
                                             <i class="bi bi-trash-fill"></i>
                                         </button>
                                     </td>
@@ -276,14 +124,9 @@
                     </table>
                 </div>
 
-                <!-- Footer Action Buttons -->
                 <div class="d-flex justify-content-between align-items-center mt-4">
-                    <a asp-action="Index" class="btn btn-outline-secondary px-4 rounded-pill">
-                        <i class="bi bi-arrow-left me-1"></i> ย้อนกลับไปหน้าหลัก
-                    </a>
-                    <button type="submit" class="btn btn-success px-5 py-2 rounded-pill fw-bold shadow-sm">
-                        <i class="bi bi-check-circle-fill me-1"></i> ยืนยันการบันทึกเข้าคลังใหญ่
-                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary px-4 rounded-pill">ย้อนกลับ</a>
+                    <button type="submit" class="btn btn-success px-5 py-2 rounded-pill fw-bold">ยืนยันการบันทึกข้อมูล</button>
                 </div>
             </form>
         </div>
@@ -291,6 +134,62 @@
 </div>
 
 <script>
+    function toggleSelectAll(master) {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => cb.checked = master.checked);
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
+        document.getElementById('selectedCount').textContent = checkedCount;
+    }
+
+    function deleteSelectedRows() {
+        const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
+        if (selectedCheckboxes.length === 0) {
+            alert("กรุณาเลือกรายการที่ต้องการลบอย่างน้อย 1 รายการ");
+            return;
+        }
+
+        if (confirm(`คุณต้องการลบรายการที่เลือกจำนวน ${selectedCheckboxes.length} รายการใช่หรือไม่?`)) {
+            selectedCheckboxes.forEach(cb => {
+                cb.closest('tr').remove();
+            });
+            document.getElementById('selectAll').checked = false;
+            reindexRows();
+            updateSelectedCount();
+        }
+    }
+
+    function removeRow(btn) {
+        if (confirm("คุณต้องการลบรายการนี้ใช่หรือไม่?")) {
+            btn.closest("tr").remove();
+            reindexRows();
+            updateSelectedCount();
+        }
+    }
+
+    function reindexRows() {
+        const rows = document.querySelectorAll("#previewTable tbody tr");
+        document.getElementById("kpiTotalItems").textContent = rows.length;
+
+        rows.forEach((row, index) => {
+            row.querySelector(".row-number").textContent = index + 1;
+
+            // Re-index form input names
+            const inputs = row.querySelectorAll("input, select");
+            inputs.forEach(input => {
+                if (input.name) {
+                    input.name = input.name.replace(/items\[\d+\]/, `items[${index}]`);
+                }
+            });
+
+            const hiddenIndex = row.querySelector(".item-index");
+            if (hiddenIndex) hiddenIndex.value = index;
+        });
+    }
+
     function recalculateRow(element) {
         const row = element.closest("tr");
         const qty = parseFloat(row.querySelector(".qty-input").value) || 0;
@@ -298,39 +197,5 @@
         const rowTotal = qty * price;
 
         row.querySelector(".row-total-val").textContent = rowTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        updateKpiSummaries();
-    }
-
-    function removeRow(btn) {
-        if (confirm("คุณต้องการลบรายการนี้ออกจากรายการรับเข้าใช่หรือไม่?")) {
-            btn.closest("tr").remove();
-            updateRowNumbers();
-            updateKpiSummaries();
-        }
-    }
-
-    function updateRowNumbers() {
-        const rows = document.querySelectorAll("#previewTable tbody tr");
-        rows.forEach((row, index) => {
-            row.querySelector(".row-number").textContent = index + 1;
-        });
-    }
-
-    function updateKpiSummaries() {
-        const rows = document.querySelectorAll("#previewTable tbody tr");
-        let totalItems = rows.length;
-        let totalQty = 0;
-        let totalAmount = 0;
-
-        rows.forEach(row => {
-            const qty = parseFloat(row.querySelector(".qty-input")?.value) || 0;
-            const price = parseFloat(row.querySelector(".price-input")?.value) || 0;
-            totalQty += qty;
-            totalAmount += (qty * price);
-        });
-
-        document.getElementById("kpiTotalItems").innerHTML = `${totalItems} <span class="fs-6 fw-normal text-muted">รายการ</span>`;
-        document.getElementById("kpiTotalQty").innerHTML = `${totalQty.toLocaleString('th-TH')} <span class="fs-6 fw-normal text-muted">หน่วย</span>`;
-        document.getElementById("kpiTotalAmount").innerHTML = `${totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="fs-6 fw-normal text-muted">บาท</span>`;
     }
 </script>

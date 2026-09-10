@@ -8,161 +8,129 @@ using DrugInventoryPro.Models;
 namespace DrugInventoryPro.Services
 {
     /// <summary>
-    /// บริการสำหรับ Parse ไฟล์ Excel 3 sheets (เวชภัณฑ์ไม่ใช่ยา, ยา, ยาเพิ่มเติม)
+    /// บริการสำหรับ Parse ไฟล์ Excel (เวชภัณฑ์ไม่ใช่ยา SUP และ ยา MED)
     /// </summary>
     public class ExcelParserService
     {
         /// <summary>
-        /// Parse ไฟล์ Excel และคืนค่ารายการทั้งหมด
+        /// Parse ไฟล์ Excel และคืนค่ารายการทั้งหมดตามประเภทการนำเข้า (importType: "SUP" หรือ "MED")
         /// </summary>
         public List<ReceiveDetail> ParseExcelFile(string filePath, string importType)
         {
-            var result = new List<ReceiveDetail>();
+            var resultList = new List<ReceiveDetail>();
 
             using (var workbook = new XLWorkbook(filePath))
             {
                 foreach (var worksheet in workbook.Worksheets)
                 {
-                    string sheetName = worksheet.Name;
-                    var usedRange = worksheet.RangeUsed();
-                    if (usedRange == null) continue;
+                    if (worksheet.RangeUsed() == null) continue;
 
-                    var rows = usedRange.RowsUsed();
+                    List<ReceiveDetail> parsedItems;
 
-                    bool isFirstRow = true;
-                    foreach (var row in rows)
+                    if (string.Equals(importType, "SUP", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (isFirstRow)
-                        {
-                            isFirstRow = false;
-                            continue;
-                        }
-
-                        // Col 1: ลำดับ (ข้ามไป)
-                        // Col 2: ชื่อยา
-                        string medName = SafeGetCellValue(row.Cell(2));
-                        if (string.IsNullOrEmpty(medName)) continue;
-
-                        // Col 3: จำนวน (ใช้ ParseQuantity แบบ ปลอดภัย)
-                        int qty = ParseQuantity(SafeGetCellValue(row.Cell(3)));
-
-                        // Col 4: ราคา (แปลงราคาสดแบบปลอดภัย)
-                        decimal price = ParseDecimalSafe(SafeGetCellValue(row.Cell(4)));
-
-                        // Col 5: Lot
-                        string lot = SafeGetCellValue(row.Cell(5));
-
-                        // Col 6: Expiry Date
-                        DateTime expiry = DateTime.Now.AddYears(2);
-                        var expiryCell = row.Cell(6);
-                        if (!expiryCell.IsEmpty())
-                        {
-                            if (expiryCell.DataType == XLDataType.DateTime)
-                            {
-                                expiry = expiryCell.GetDateTime();
-                            }
-                            else if (DateTime.TryParse(SafeGetCellValue(expiryCell), out DateTime parsedDate))
-                            {
-                                expiry = parsedDate;
-                            }
-                        }
-
-                        // Col 7: Packing Size, Col 8: Account Type
-                        string packingSize = SafeGetCellValue(row.Cell(7));
-                        string accountType = SafeGetCellValue(row.Cell(8));
-
-                        result.Add(new ReceiveDetail
-                        {
-                            Medicine_name = medName,
-                            Quantity_received = qty,
-                            Price = price,
-                            Lot_number = lot,
-                            Expiry_date = expiry,
-                            Packing_Size = packingSize,
-                            Account_Type = accountType,
-                            SheetName = sheetName
-                        });
+                        parsedItems = ParseSuppliesSheet(worksheet);
                     }
+                    else
+                    {
+                        parsedItems = ParseMedicinesSheet(worksheet);
+                    }
+
+                    resultList.AddRange(parsedItems);
                 }
             }
 
-            return result;
+            return resultList;
         }
 
+        /// <summary>
+        /// ตรวจสอบรายการซ้ำหรือใกล้เคียงในระบบ
+        /// </summary>
         public void DetectDuplicates(List<ReceiveDetail> rawList, List<Medicines> existingMedicines)
         {
             foreach (var item in rawList)
             {
-                var match = existingMedicines.FirstOrDefault(m =>
-                    m.Medicine_name != null &&
-                    m.Medicine_name.Equals(item.Medicine_name, StringComparison.OrdinalIgnoreCase));
+                if (string.IsNullOrWhiteSpace(item.Medicine_name)) continue;
 
-                if (match != null)
+                var trimmedName = item.Medicine_name.Trim();
+
+                // 1. ตรวจสอบแบบตรงกันเป๊ะ (Exact Match)
+                var exactMatch = existingMedicines.FirstOrDefault(m =>
+                    !string.IsNullOrWhiteSpace(m.Medicine_name) &&
+                    m.Medicine_name.Trim().Equals(trimmedName, StringComparison.OrdinalIgnoreCase));
+
+                if (exactMatch != null)
                 {
                     item.IsDuplicateOrSimilar = true;
-                    item.MatchedMedicineId = match.Medicine_id;
-                    item.MatchedMedicineName = match.Medicine_name;
+                    item.MatchedMedicineId = exactMatch.Medicine_id;
+                    item.MatchedMedicineName = exactMatch.Medicine_name;
+                    item.ActionType = "UpdateExisting";
+                    continue;
+                }
+
+                // 2. ตรวจสอบความคล้ายคลึง (Fuzzy Match >= 85%)
+                var similarMatch = existingMedicines
+                    .Select(m => new { Medicine = m, Similarity = CalculateSimilarity(trimmedName, m.Medicine_name ?? "") })
+                    .Where(x => x.Similarity >= 0.85)
+                    .OrderByDescending(x => x.Similarity)
+                    .FirstOrDefault();
+
+                if (similarMatch != null)
+                {
+                    item.IsDuplicateOrSimilar = true;
+                    item.MatchedMedicineId = similarMatch.Medicine.Medicine_id;
+                    item.MatchedMedicineName = similarMatch.Medicine.Medicine_name;
                     item.ActionType = "UpdateExisting";
                 }
             }
         }
 
         /// <summary>
-        /// Parse Sheet 1: เวชภัณฑ์ไม่ใช่ยา (เริ่มจาก Row 7)
-        /// Column: A=ลำดับ, B=ชื่อ, C=ขนาด, D=ประเภท, E=จำนวนเบิก
+        /// Parse ข้อมูลเวชภัณฑ์มิใช่ยา (SUP)
         /// </summary>
         private List<ReceiveDetail> ParseSuppliesSheet(IXLWorksheet worksheet)
         {
             var items = new List<ReceiveDetail>();
-            int dataStartRow = 7;
-
             var usedRange = worksheet.RangeUsed();
             if (usedRange == null) return items;
 
             int lastRow = usedRange.LastRow().RowNumber();
+            string sheetName = worksheet.Name;
+
+            // ค้นหาบรรทัด Header โดยอัตโนมัติ
+            int dataStartRow = FindHeaderRow(worksheet, lastRow) + 1;
+            if (dataStartRow <= 1) dataStartRow = 7; // ค่าสำรองกรณีหาไม่พบ
 
             for (int row = dataStartRow; row <= lastRow; row++)
             {
                 try
                 {
-                    // Column A: ลำดับที่ (ต้องเป็นตัวเลข)
-                    string colA = SafeGetCellValue(worksheet.Cell(row, 1));
-
-                    if (string.IsNullOrEmpty(colA) || !int.TryParse(colA, out _))
-                        continue;
-
-                    // Column B: ชื่อรายการ
                     string itemName = SafeGetCellValue(worksheet.Cell(row, 2));
 
-                    if (string.IsNullOrWhiteSpace(itemName) || itemName.Contains("เวชภัณฑ์อื่นๆ"))
+                    if (string.IsNullOrWhiteSpace(itemName) || itemName.Contains("เวชภัณฑ์อื่นๆ") || itemName.Contains("รายการ"))
                         continue;
 
-                    // Column C: ขนาด/บรรจุ
-                    string packSize = SafeGetCellValue(worksheet.Cell(row, 3));
-
-                    // Column D: ประเภท (ED/NED)
-                    string accountType = SafeGetCellValue(worksheet.Cell(row, 4));
-                    if (string.IsNullOrWhiteSpace(accountType))
-                        accountType = "SUP";
-
-                    // Column E: จำนวนเบิก/ขอ
-                    string qtyStr = SafeGetCellValue(worksheet.Cell(row, 5));
+                    string packSize = SafeGetCellValue(worksheet.Cell(row, 3)); // Col C: ขนาด / คุณลักษณะ
+                    string qtyStr = SafeGetCellValue(worksheet.Cell(row, 4));   // Col D: จำนวนขอเบิก
                     int qty = ParseQuantity(qtyStr);
+
+                    string remark = SafeGetCellValue(worksheet.Cell(row, 6));   // Col F: หมายเหตุ
 
                     var detail = CreateReceiveDetail(
                         itemName: itemName,
                         quantity: qty,
                         packSize: packSize,
-                        accountType: accountType,
-                        importType: "SUP"
+                        account_Type: "เวชภัณฑ์",
+                        importType: "SUP",
+                        sheetName: sheetName,
+                        remark: remark
                     );
 
                     items.Add(detail);
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error parsing Supplies Sheet row {row}: {ex.Message}");
-                    continue;
+                    System.Diagnostics.Debug.WriteLine($"Error parsing SUP Row {row}: {ex.Message}");
                 }
             }
 
@@ -170,70 +138,88 @@ namespace DrugInventoryPro.Services
         }
 
         /// <summary>
-        /// Parse Sheet 2 & 3: ยา (เริ่มจาก Row 7)
-        /// Column: A=ลำดับ, B=ชื่อ, C=ขนาด, D=ประเภท, E=จำนวนขอ
+        /// Parse ข้อมูลยา (MED)
         /// </summary>
         private List<ReceiveDetail> ParseMedicinesSheet(IXLWorksheet worksheet)
         {
             var items = new List<ReceiveDetail>();
-            int dataStartRow = 7;
-
             var usedRange = worksheet.RangeUsed();
             if (usedRange == null) return items;
 
             int lastRow = usedRange.LastRow().RowNumber();
+            string sheetName = worksheet.Name;
+
+            // ค้นหาบรรทัด Header โดยอัตโนมัติ
+            int dataStartRow = FindHeaderRow(worksheet, lastRow) + 1;
+            if (dataStartRow <= 1) dataStartRow = 8; // ค่าสำรองกรณีหาไม่พบ
 
             for (int row = dataStartRow; row <= lastRow; row++)
             {
                 try
                 {
-                    // Column A: ลำดับที่ (ต้องเป็นตัวเลข)
-                    string colA = SafeGetCellValue(worksheet.Cell(row, 1));
-
-                    if (string.IsNullOrEmpty(colA) || !int.TryParse(colA, out _))
-                        continue;
-
-                    // Column B: ชื่อรายการ/ยา
+                    // Col B (2): รายการยา
                     string itemName = SafeGetCellValue(worksheet.Cell(row, 2));
+                    if (string.IsNullOrWhiteSpace(itemName) || itemName.Contains("รายการยา")) continue;
 
-                    if (string.IsNullOrWhiteSpace(itemName))
-                        continue;
+                    // Col C (3): ความแรง / ปริมาตร
+                    string strength = SafeGetCellValue(worksheet.Cell(row, 3));
 
-                    // Column C: ขนาด/บรรจุ
-                    string packSize = SafeGetCellValue(worksheet.Cell(row, 3));
+                    // Col D (4): ขนาดบรรจุ
+                    string rawPackSize = SafeGetCellValue(worksheet.Cell(row, 4));
 
-                    // Column D: ประเภท (ED/NED)
-                    string accountType = SafeGetCellValue(worksheet.Cell(row, 4));
-                    if (string.IsNullOrWhiteSpace(accountType))
-                        accountType = "ED";
+                    // ผสมความแรงและขนาดบรรจุเข้าด้วยกัน
+                    string combinedPackSize = !string.IsNullOrEmpty(strength) && !string.IsNullOrEmpty(rawPackSize)
+                        ? $"{strength} ({rawPackSize})"
+                        : (!string.IsNullOrEmpty(strength) ? strength : rawPackSize);
 
-                    // Column E: จำนวนขอเบิก (ถ้าว่าง ให้ลองดู Column F, G, H)
-                    string qtyStr = SafeGetCellValue(worksheet.Cell(row, 5));
-                    if (string.IsNullOrWhiteSpace(qtyStr)) qtyStr = SafeGetCellValue(worksheet.Cell(row, 6));
-                    if (string.IsNullOrWhiteSpace(qtyStr)) qtyStr = SafeGetCellValue(worksheet.Cell(row, 7));
-                    if (string.IsNullOrWhiteSpace(qtyStr)) qtyStr = SafeGetCellValue(worksheet.Cell(row, 8));
+                    // Col E (5): ประเภทบัญชียาหลักแห่งชาติ (ED / NED)
+                    string accountType = SafeGetCellValue(worksheet.Cell(row, 5));
+                    if (string.IsNullOrWhiteSpace(accountType)) accountType = "ED";
 
+                    // Col H (8): จำนวนขอเบิก
+                    string qtyStr = SafeGetCellValue(worksheet.Cell(row, 8));
                     int qty = ParseQuantity(qtyStr);
-                    if (qty <= 0) continue;
+
+                    // Col I (9): หมายเหตุ
+                    string remark = SafeGetCellValue(worksheet.Cell(row, 9));
 
                     var detail = CreateReceiveDetail(
                         itemName: itemName,
                         quantity: qty,
-                        packSize: packSize,
-                        accountType: accountType,
-                        importType: "MED"
+                        packSize: combinedPackSize,
+                        account_Type: accountType,
+                        importType: "MED",
+                        sheetName: sheetName,
+                        unitId: strength,
+                        remark: remark
                     );
 
                     items.Add(detail);
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error parsing Medicines Sheet row {row}: {ex.Message}");
-                    continue;
+                    System.Diagnostics.Debug.WriteLine($"Error parsing MED Row {row}: {ex.Message}");
                 }
             }
 
             return items;
+        }
+
+        /// <summary>
+        /// ค้นหาบรรทัดที่เป็น Header ของตารางข้อมูล
+        /// </summary>
+        private int FindHeaderRow(IXLWorksheet worksheet, int lastRow)
+        {
+            for (int r = 1; r <= Math.Min(15, lastRow); r++)
+            {
+                string c2 = SafeGetCellValue(worksheet.Cell(r, 2));
+                string c1 = SafeGetCellValue(worksheet.Cell(r, 1));
+                if (c2.Contains("รายการ") || c2.Contains("ชื่อยา") || c1.Contains("รายการ") || c1.Contains("ที่"))
+                {
+                    return r;
+                }
+            }
+            return 0;
         }
 
         /// <summary>
@@ -255,27 +241,28 @@ namespace DrugInventoryPro.Services
         }
 
         /// <summary>
-        /// Parse จำนวนจากข้อความ เช่น "2*25", "100", "100อัน", "-" ให้เป็นตัวเลข
+        /// Parse จำนวนจากข้อความ เช่น "2*25", "2x25", "100", "100อัน", "-" ให้เป็นตัวเลข
         /// </summary>
         private int ParseQuantity(string qtyStr)
         {
             if (string.IsNullOrWhiteSpace(qtyStr))
                 return 0;
 
-            qtyStr = qtyStr.Trim()
-                .Replace(",", "")
-                .Replace("อัน", "")
-                .Replace("ชิ้น", "")
-                .Replace("ขวด", "")
-                .Replace("กล่อง", "")
-                .Replace("โหล", "")
-                .Replace("ม้วน", "")
-                .Replace("ชั้น", "");
+            qtyStr = qtyStr.Trim();
 
-            // กรณีเช่น "2*25" => 50
-            if (qtyStr.Contains('*'))
+            // ลบชื่อหน่วยนับออกจากข้อความ
+            string[] units = { "อัน", "ชิ้น", "ขวด", "กล่อง", "โหล", "ม้วน", "ชั้น", "ซอง", "แผง", "หลอด", "กระปุก", "คู่", "cap", "tab", "amp", "vial" };
+            foreach (var unit in units)
             {
-                var parts = qtyStr.Split('*');
+                qtyStr = Regex.Replace(qtyStr, unit, "", RegexOptions.IgnoreCase);
+            }
+
+            qtyStr = qtyStr.Replace(",", "").Trim();
+
+            // กรณีสูตรคูณ เช่น "2*25" หรือ "2x25"
+            if (qtyStr.Contains('*') || qtyStr.Contains('x') || qtyStr.Contains('X'))
+            {
+                var parts = qtyStr.Split(new[] { '*', 'x', 'X' }, StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length == 2)
                 {
                     var match1 = Regex.Match(parts[0].Trim(), @"\d+");
@@ -291,7 +278,6 @@ namespace DrugInventoryPro.Services
                 }
             }
 
-            // ค้นหาตัวเลขแรกในข้อความ
             var numberMatch = Regex.Match(qtyStr, @"\d+");
             if (numberMatch.Success && int.TryParse(numberMatch.Value, out int parsedQty))
             {
@@ -324,38 +310,38 @@ namespace DrugInventoryPro.Services
         }
 
         /// <summary>
-        /// สร้าง ReceiveDetail object พร้อมข้อมูลสำหรับแสดงใน View
+        /// สร้าง ReceiveDetail object พร้อมตั้งค่าสำหรับ NotMapped Properties
         /// </summary>
         private ReceiveDetail CreateReceiveDetail(
             string itemName,
             int quantity,
             string packSize,
-            string accountType,
-            string importType)
+            string account_Type,
+            string importType,
+            string sheetName,
+            string? unitId = null,
+            string? remark = null)
         {
             string prefix = (importType == "MED") ? "MED" : "SUP";
 
             return new ReceiveDetail
             {
+                Receive_detail_id = Guid.NewGuid().ToString("N"),
                 Medicine_id = $"{prefix}-TEMP-{Guid.NewGuid().ToString().Substring(0, 8)}",
+                Medicine_name = itemName,
                 Quantity_received = quantity,
+                Price = 0m,
                 Lot_number = $"LOT-{DateTime.Now:yyyyMMdd}",
                 Expiry_date = DateTime.Now.AddYears(2),
-
+                Packing_Size = packSize,
+                Account_Type = account_Type,
+                Unit_id = unitId,
+                Remark = remark,
+                SheetName = sheetName,
                 IsDuplicateOrSimilar = false,
                 MatchedMedicineId = null,
                 MatchedMedicineName = null,
-                ActionType = "AddNew",
-
-                Medicines = new Medicines
-                {
-                    Medicine_id = $"{prefix}-TEMP",
-                    Medicine_name = itemName,
-                    Price = 0,
-                    Packing_Size = packSize,
-                    Account_Type = accountType,
-                    Category_id = importType
-                }
+                ActionType = "AddNew"
             };
         }
 

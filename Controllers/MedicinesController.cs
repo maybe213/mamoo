@@ -24,23 +24,56 @@ namespace DrugInventoryPro.Controllers
         #region Helpers & Data Preparation
 
         // Helper จัดกลุ่มแยก "ยา" และ "เวชภัณฑ์" ใส่ ViewBag ให้ View "Catalog" ดึงไปใช้
-        private void PopulateCatalogViewBag(List<Medicines> allItems)
+        // 1. ปรับปรุง Helper ให้รับตัวเลือกการเรียงลำดับ
+        private void PopulateCatalogViewBag(List<Medicines> allItems, string sortBy = "id_asc")
         {
-            ViewBag.Medicines = allItems
+            IEnumerable<Medicines> query = allItems;
+
+            // ตรวจสอบตัวเลือกการเรียงลำดับ
+            switch (sortBy)
+            {
+                case "fefo":
+                    // FEFO: ยาที่หมดอายุก่อนจะขึ้นก่อน
+                    query = query
+                        .OrderBy(m => m.Expired_at.HasValue ? 0 : 1)
+                        .ThenBy(m => m.Expired_at)
+                        .ThenBy(m => m.Medicine_id);
+                    break;
+                case "stock_asc":
+                    // เรียงตามสต็อกคงเหลือ: น้อยไปมาก
+                    query = query
+                        .OrderBy(m => m.Stock ?? 0)
+                        .ThenBy(m => m.Medicine_id);
+                    break;
+                case "stock_desc":
+                    // เรียงตามสต็อกคงเหลือ: มากไปน้อย
+                    query = query
+                        .OrderByDescending(m => m.Stock ?? 0)
+                        .ThenBy(m => m.Medicine_id);
+                    break;
+                default:
+                    // เรียงตามรหัส (Default)
+                    query = query.OrderBy(m => m.Medicine_id);
+                    break;
+            }
+
+            ViewBag.Medicines = query
                 .Where(m => m.Account_Type != "เวชภัณฑ์" &&
                             !(m.Category != null && m.Category.Category_name != null && m.Category.Category_name.Contains("เวชภัณฑ์")))
                 .ToList();
 
-            ViewBag.Supplies = allItems
+            ViewBag.Supplies = query
                 .Where(m => m.Account_Type == "เวชภัณฑ์" ||
                             (m.Category != null && m.Category.Category_name != null && m.Category.Category_name.Contains("เวชภัณฑ์")))
                 .ToList();
+
+            ViewBag.CurrentSort = sortBy;
         }
 
         // Helper วิเคราะห์ Prefix จาก Category หรือ Account_Type (MED / SUP)
-        private async Task<string> ResolvePrefixAsync(string? categoryId, string? accountType = null)
+        private async Task<string> ResolvePrefixAsync(string? categoryId, string? account_Type = null)
         {
-            if (!string.IsNullOrEmpty(accountType) && accountType.Trim().Equals("เวชภัณฑ์", StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(account_Type) && account_Type.Trim().Equals("เวชภัณฑ์", StringComparison.OrdinalIgnoreCase))
                 return "SUP";
 
             if (!string.IsNullOrEmpty(categoryId) && int.TryParse(categoryId, out int catId))
@@ -227,7 +260,7 @@ namespace DrugInventoryPro.Controllers
 
         // CATALOG
         [HttpGet]
-        public async Task<IActionResult> Catalog()
+        public async Task<IActionResult> Catalog(string sortBy = "id_asc")
         {
             var allItems = await _context.Medicines
                 .AsNoTracking()
@@ -236,7 +269,7 @@ namespace DrugInventoryPro.Controllers
                 .Where(m => m.Status != "Inactive")
                 .ToListAsync();
 
-            PopulateCatalogViewBag(allItems);
+            PopulateCatalogViewBag(allItems, sortBy);
             ViewData["Title"] = "รายการยาและเวชภัณฑ์ทั้งหมด";
 
             return View();
