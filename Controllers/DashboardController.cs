@@ -125,7 +125,7 @@ namespace DrugInventoryPro.Controllers
                 .ToListAsync();
 
             // ==========================================
-            // [ภาค 1] ตัวแปรสถิติภาพรวม & จุดสั่งซื้อซ้ำ (ROP)
+            // ตัวแปรสถิติภาพรวม & จุดสั่งซื้อซ้ำ (ROP)
             // ==========================================
             ViewBag.TotalMedicines = allMedicines.Count;
             ViewBag.ExpiredCount = allMedicines.Count(m => m.Expired_at.HasValue && m.Expired_at.Value.Date < today);
@@ -161,7 +161,7 @@ namespace DrugInventoryPro.Controllers
                 .ToList();
 
             // ==========================================
-            // [ภาค 2] ยาที่เบิกจ่ายมากที่สุด และน้อยที่สุด 5 อันดับ (เฉพาะที่อนุมัติแล้ว)
+            //  ยาที่เบิกจ่ายมากที่สุด และน้อยที่สุด 5 อันดับ (เฉพาะที่อนุมัติแล้ว)
             // ==========================================
             ViewBag.Top5MostDispensed = await _context.DispenseDetails
                 .AsNoTracking()
@@ -190,7 +190,7 @@ namespace DrugInventoryPro.Controllers
                 .ToListAsync();
 
             // ==========================================
-            // [ภาค 3] ข้อมูล Real-time แผงควบคุมใบเบิกจ่าย
+            // ข้อมูล Real-time แผงควบคุมใบเบิกจ่าย
             // ==========================================
             ViewBag.PendingDispense = await _context.Dispense.CountAsync(x => x.Status == "Pending");
             ViewBag.ApprovedDispense = await _context.Dispense.CountAsync(x => x.Status == "Approved");
@@ -202,7 +202,7 @@ namespace DrugInventoryPro.Controllers
                                  d.Dispense_date.Value.Year == today.Year);
 
             // ==========================================
-            // [ภาค 4] รายงานประจำงวด 3 ระยะเวลา (สัปดาห์ / เดือน / ปี)
+            //  รายงานประจำงวด 3 ระยะเวลา (สัปดาห์ / เดือน / ปี)
             // ==========================================
             var weeklyDispenses = await _context.DispenseDetails
                 .AsNoTracking()
@@ -253,7 +253,7 @@ namespace DrugInventoryPro.Controllers
             ViewBag.YearlyNetStock = ViewBag.YearlyInboundCount - ViewBag.YearlyOutboundCount;
 
             // ==========================================
-            // [ภาค 5] ข้อมูลกราฟสถิติย้อนหลัง 6 เดือน
+            //  ข้อมูลกราฟสถิติย้อนหลัง 6 เดือน
             // ==========================================
             var monthlyUsageData = new List<int>();
             for (int i = 5; i >= 0; i--)
@@ -267,11 +267,11 @@ namespace DrugInventoryPro.Controllers
             }
             ViewBag.MonthlyUsage = monthlyUsageData;
             // ==========================================
-            // [ภาค 6] วิเคราะห์แนวโน้มโรค (ย้อนหลัง 6 เดือน เฉพาะใบเบิกที่อนุมัติแล้ว)
+            //  วิเคราะห์แนวโน้มโรค (ย้อนหลัง 6 เดือน เฉพาะใบเบิกที่อนุมัติแล้ว)
             // ==========================================
             var trendStart = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
 
-            var diseaseRows = await _context.DispenseDetails
+            var rawDiseaseRows = await _context.DispenseDetails
                 .AsNoTracking()
                 .Where(dd => dd.Dispense != null &&
                              dd.Dispense.Status == "Approved" &&
@@ -279,12 +279,34 @@ namespace DrugInventoryPro.Controllers
                              dd.Dispense.Dispense_date.Value >= trendStart)
                 .Select(dd => new
                 {
-                    Group = dd.Medicine.Category.Category_name ?? "ไม่ระบุกลุ่มโรค",   // ⚠️ ดูหมายเหตุด้านล่าง
-                    Dept = dd.Dispense.Departments.Department_name ?? "ไม่ระบุแผนก",  // ⚠️ ดูหมายเหตุด้านล่าง
+                    RelatedDisease = dd.Medicine.Category.Related_disease,   // ✅ ใช้ related_disease แทน category_name
+                    Dept = dd.Dispense.Departments.Department_name ?? "ไม่ระบุแผนก",
                     Date = dd.Dispense.Dispense_date.Value,
                     Qty = dd.Quantity_dispensed ?? 0
                 })
                 .ToListAsync();
+
+            // ⚠️ related_disease อาจมีหลายโรคคั่นด้วยจุลภาค (เช่น "ไข้หวัด, ท้องเสีย, ท้องอืด")
+            // จึงต้อง "แตก" แต่ละแถวออกเป็นรายโรค ก่อนนำไป Group เพื่อให้แสดงชื่อโรคจริง ไม่ใช่กลุ่มยาว
+            var diseaseRows = rawDiseaseRows
+                .SelectMany(x =>
+                {
+                    var names = string.IsNullOrWhiteSpace(x.RelatedDisease)
+                        ? new[] { "ไม่ระบุโรค" }
+                        : x.RelatedDisease.Split(',')
+                            .Select(n => n.Trim())
+                            .Where(n => !string.IsNullOrEmpty(n))
+                            .ToArray();
+
+                    return names.Select(name => new
+                    {
+                        Group = name,
+                        Dept = x.Dept,
+                        Date = x.Date,
+                        Qty = x.Qty
+                    });
+                })
+                .ToList();
 
             // 1) Top Diseases + ตารางรายละเอียด
             var topDiseases = diseaseRows
@@ -297,7 +319,7 @@ namespace DrugInventoryPro.Controllers
             ViewBag.TopDiseaseLabels = topDiseases.Select(x => x.Name).ToList();
             ViewBag.TopDiseaseData = topDiseases.Select(x => x.Total).ToList();
 
-            // 2) Disease Trends (5 กลุ่มแรก x 6 เดือน)
+            // 2) Disease Trends (5 โรคแรก x 6 เดือน)
             var thCulture = new System.Globalization.CultureInfo("th-TH");
             var months = Enumerable.Range(0, 6).Select(i => trendStart.AddMonths(i)).ToList();
             ViewBag.DiseaseTrendMonthLabels = months.Select(m => m.ToString("MMM yy", thCulture)).ToList();
@@ -325,11 +347,10 @@ namespace DrugInventoryPro.Controllers
             ViewBag.DepartmentRiskData = deptRisk.Select(x => x.Total).ToList();
             return View();
         }
-
-        // ==========================================
-        // Export Excel รายงาน บัญชีรับ-จ่ายเวชภัณฑ์ (รบ 301)
-        // ==========================================
-        [HttpGet]
+           // =========================================
+           // Export Excel รายงาน บัญชีรับ-จ่ายเวชภัณฑ์ (รบ 301)
+           // =========================================
+            [HttpGet]
         public async Task<IActionResult> ExportDrugstoreReport(DateTime? startDate, DateTime? endDate)
         {
             var start = startDate ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
