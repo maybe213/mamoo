@@ -266,7 +266,63 @@ namespace DrugInventoryPro.Controllers
                 monthlyUsageData.Add(monthCount);
             }
             ViewBag.MonthlyUsage = monthlyUsageData;
+            // ==========================================
+            // [ภาค 6] วิเคราะห์แนวโน้มโรค (ย้อนหลัง 6 เดือน เฉพาะใบเบิกที่อนุมัติแล้ว)
+            // ==========================================
+            var trendStart = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
 
+            var diseaseRows = await _context.DispenseDetails
+                .AsNoTracking()
+                .Where(dd => dd.Dispense != null &&
+                             dd.Dispense.Status == "Approved" &&
+                             dd.Dispense.Dispense_date.HasValue &&
+                             dd.Dispense.Dispense_date.Value >= trendStart)
+                .Select(dd => new
+                {
+                    Group = dd.Medicine.Category.Category_name ?? "ไม่ระบุกลุ่มโรค",   // ⚠️ ดูหมายเหตุด้านล่าง
+                    Dept = dd.Dispense.Departments.Department_name ?? "ไม่ระบุแผนก",  // ⚠️ ดูหมายเหตุด้านล่าง
+                    Date = dd.Dispense.Dispense_date.Value,
+                    Qty = dd.Quantity_dispensed ?? 0
+                })
+                .ToListAsync();
+
+            // 1) Top Diseases + ตารางรายละเอียด
+            var topDiseases = diseaseRows
+                .GroupBy(x => x.Group)
+                .Select(g => new { Name = g.Key, Total = g.Sum(x => x.Qty) })
+                .OrderByDescending(x => x.Total)
+                .Take(8)
+                .ToList();
+
+            ViewBag.TopDiseaseLabels = topDiseases.Select(x => x.Name).ToList();
+            ViewBag.TopDiseaseData = topDiseases.Select(x => x.Total).ToList();
+
+            // 2) Disease Trends (5 กลุ่มแรก x 6 เดือน)
+            var thCulture = new System.Globalization.CultureInfo("th-TH");
+            var months = Enumerable.Range(0, 6).Select(i => trendStart.AddMonths(i)).ToList();
+            ViewBag.DiseaseTrendMonthLabels = months.Select(m => m.ToString("MMM yy", thCulture)).ToList();
+
+            var trendSeries = new Dictionary<string, List<int>>();
+            foreach (var name in topDiseases.Take(5).Select(x => x.Name))
+            {
+                trendSeries[name] = months
+                    .Select(m => diseaseRows
+                        .Where(x => x.Group == name && x.Date.Year == m.Year && x.Date.Month == m.Month)
+                        .Sum(x => x.Qty))
+                    .ToList();
+            }
+            ViewBag.DiseaseTrendSeries = trendSeries;
+
+            // 3) Department Risk
+            var deptRisk = diseaseRows
+                .GroupBy(x => x.Dept)
+                .Select(g => new { Name = g.Key, Total = g.Sum(x => x.Qty) })
+                .OrderByDescending(x => x.Total)
+                .Take(8)
+                .ToList();
+
+            ViewBag.DepartmentRiskLabels = deptRisk.Select(x => x.Name).ToList();
+            ViewBag.DepartmentRiskData = deptRisk.Select(x => x.Total).ToList();
             return View();
         }
 
