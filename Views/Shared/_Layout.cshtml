@@ -416,7 +416,28 @@
                     display: block;
                 }
         }
+        /* สไตล์เมนูแบบกรอบแคปซูล (แสดงกรอบเฉพาะตอน Hover และ Active) */
+        .sidebar a.menu-outlined {
+            border: 1.5px solid transparent; /* ปกติไม่มีเส้นกรอบ */
+            border-radius: 50px; /* ขอบมนทรงแคปซูล */
+            background: transparent;
+            transition: all 0.2s ease-in-out;
+        }
+
+            /* เมื่อเอาเมาส์ไปชี้ (Hover) หรือถูกเลือกอยู่ (Active) */
+            .sidebar a.menu-outlined:hover,
+            .sidebar a.menu-outlined.active-outlined {
+                border-color: #475569 !important; /* สีกรอบเข้มตามรูป */
+                background: transparent !important; /* ไม่มีสีพื้นหลัง */
+                color: #334155 !important;
+            }
+
+                .sidebar a.menu-outlined:hover i,
+                .sidebar a.menu-outlined.active-outlined i {
+                    color: #334155 !important;
+                }
     </style>
+
 </head>
 
 <body>
@@ -448,17 +469,26 @@
             <div class="sidebar-menu-scroll">
 
                 <p class="nav-label"><i class="bi bi-grid-fill"></i> <span class="menu-text">เมนูหลัก</span></p>
-                <a asp-controller="Dashboard" asp-action="Index" data-title="หน้าแรก (Dashboard)" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" ? "active-link" : "")">
+                <a asp-controller="Dashboard"
+                   asp-action="Index"
+                   data-title="หน้าแรก (Dashboard)"
+                   class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" ? "active-outlined" : "")">
                     <i class="bi bi-speedometer2"></i> <span class="menu-text">หน้าแรก (Dashboard)</span>
                 </a>
 
                 @if (role == "Admin")
                 {
                     <p class="nav-label"><i class="bi bi-gear-fill"></i> <span class="menu-text">จัดการระบบ</span></p>
-                    <a asp-controller="Users" asp-action="Index" data-title="จัดการผู้ใช้" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Users" ? "active-link" : "")">
+                    <a asp-controller="Users"
+                       asp-action="Index"
+                       data-title="จัดการผู้ใช้"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Users" ? "active-outlined" : "")">
                         <i class="bi bi-people"></i> <span class="menu-text">จัดการผู้ใช้</span>
                     </a>
-                    <a asp-controller="Departments" asp-action="Index" data-title="ข้อมูลแผนก" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Departments" ? "active-link" : "")">
+                    <a asp-controller="Departments"
+                       asp-action="Index"
+                       data-title="ข้อมูลแผนก"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Departments" ? "active-outlined" : "")">
                         <i class="bi bi-hospital"></i> <span class="menu-text">ข้อมูลแผนก</span>
                     </a>
                 }
@@ -466,38 +496,69 @@
                 @if (role == "Pharmacist")
                 {
                     <p class="nav-label"><i class="bi bi-box-seam-fill"></i> <span class="menu-text">บริหารคลังยา</span></p>
-                    <a asp-controller="Medicines" asp-action="Index" data-title="ทะเบียนยาและเวชภัณฑ์" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Medicines" ? "active-link" : "")">
-                        <i class="bi bi-capsule"></i> <span class="menu-text">ทะเบียนยาและเวชภัณฑ์</span>
+                    <a asp-controller="Medicines"
+                       asp-action="Index"
+                       data-title="จัดการยาและเวชภัณฑ์"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Medicines" && ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active-outlined" : "")">
+                        <i class="bi bi-capsule"></i> <span class="menu-text">จัดการยาและเวชภัณฑ์</span>
                     </a>
-                    <a asp-controller="Receive" asp-action="Index" data-title="รับเข้าคลังยา" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Receive" ? "active-link" : "")">
+                    <a asp-controller="Receive"
+                       asp-action="Index"
+                       data-title="รับเข้าคลังยา"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Receive" ? "active-outlined" : "")">
                         <i class="bi bi-box-arrow-in-down"></i> <span class="menu-text">รับเข้าคลังยา</span>
                     </a>
-                    <a asp-controller="StockAlert" asp-action="index" data-title="จัดการล็อตและวันหมดอายุ" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrders" ? "active-link" : "")">
-                        <i class="bi bi-cart-check"></i> <span class="menu-text">จัดการล็อตและวันหมดอายุ</span>
+                    <a asp-controller="StockAlert"
+                       asp-action="Index"
+                       data-title="ล็อตและวันหมดอายุ"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "StockAlert" ? "active-outlined" : "")">
+                        <i class="bi bi-cart-check"></i> <span class="menu-text">ล็อตและวันหมดอายุ</span>
                     </a>
 
                     <p class="nav-label"><i class="bi bi-clipboard2-pulse-fill"></i> <span class="menu-text">การเบิกจ่าย</span></p>
-                    <a asp-controller="Dispense" asp-action="Create" data-title="ขอเบิกยาและเวชภัณฑ์" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Create" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" ? "active-link" : "")">
+                    <a asp-controller="Dispense"
+                       asp-action="Create"
+                       data-title="ขอเบิกยาและเวชภัณฑ์"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" && ViewContext.RouteData.Values["Action"]?.ToString() == "Create" ? "active-outlined" : "")">
                         <i class="bi bi-clipboard-plus"></i> <span class="menu-text">ขอเบิกยาและเวชภัณฑ์</span>
                     </a>
-                    <a asp-controller="Dispense" asp-action="Index" data-title="สถานะคำขอเบิก" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" ? "active-link" : "")">
+                    <a asp-controller="Dispense"
+                       asp-action="Index"
+                       data-title="สถานะคำขอเบิก"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" && ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active-outlined" : "")">
                         <i class="bi bi-list-check"></i> <span class="menu-text">สถานะคำขอเบิก</span>
                     </a>
-                    <a asp-controller="Dispense" asp-action="Approve" data-title="อนุมัติการเบิกจ่าย" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Approve" ? "active-link" : "")">
+                    <a asp-controller="Dispense"
+                       asp-action="Approve"
+                       data-title="อนุมัติการเบิกจ่าย"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" && ViewContext.RouteData.Values["Action"]?.ToString() == "Approve" ? "active-outlined" : "")">
                         <i class="bi bi-shield-check"></i> <span class="menu-text">อนุมัติการเบิกจ่าย</span>
+                    </a>
+                    <a asp-controller="Medicines"
+                       asp-action="DisabledList"
+                       data-title="รายการที่ปิดใช้งาน"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Medicines" && ViewContext.RouteData.Values["Action"]?.ToString() == "DisabledList" ? "active-outlined" : "")">
+                        <i class="bi bi-archive"></i> <span class="menu-text">รายการที่ปิดใช้งาน</span>
                     </a>
                 }
 
                 @if (role == "Staff")
                 {
                     <p class="nav-label"><i class="bi bi-clipboard2-pulse-fill"></i> <span class="menu-text">การเบิกจ่าย</span></p>
-                    <a asp-controller="Dispense" asp-action="Create" data-title="สร้างคำขอเบิกยา" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Create" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" ? "active-link" : "")">
+                    <a asp-controller="Dispense"
+                       asp-action="Create"
+                       data-title="สร้างคำขอเบิกยา"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" && ViewContext.RouteData.Values["Action"]?.ToString() == "Create" ? "active-outlined" : "")">
                         <i class="bi bi-clipboard-plus"></i> <span class="menu-text">สร้างคำขอเบิกยา</span>
                     </a>
-                    <a asp-controller="Dispense" asp-action="Index" data-title="ตรวจสอบสถานะคำขอ" class="@(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" ? "active-link" : "")">
+                    <a asp-controller="Dispense"
+                       asp-action="Index"
+                       data-title="ตรวจสอบสถานะคำขอ"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dispense" && ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active-outlined" : "")">
                         <i class="bi bi-list-check"></i> <span class="menu-text">ตรวจสอบสถานะคำขอ</span>
                     </a>
                 }
+
             </div>
 
             <div class="logout-section">

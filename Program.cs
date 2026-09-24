@@ -1,5 +1,6 @@
 ﻿using DrugInventoryPro.Data;
-using Microsoft.AspNetCore.Http.Features; // 👈 1. เพิ่ม Namespace สำหรับ FormOptions
+using DrugInventoryPro.Services; // 👈 เพิ่ม Namespace สำหรับ Services
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,10 +8,14 @@ var builder = WebApplication.CreateBuilder(args);
 // Services
 builder.Services.AddControllersWithViews();
 
-// 🛠️ 2. เพิ่มส่วนขยายขีดจำกัดการรับค่า Form (แก้ไขปัญหา HTTP ERROR 400)
+// 🛠️ ลงทะเบียน Services สำหรับการอ่านไฟล์ CSV และ Excel (แก้ปัญหา DI Error)
+builder.Services.AddScoped<ExcelParserService>();
+builder.Services.AddScoped<CsvParserService>();
+
+// 🛠️ เพิ่มส่วนขยายขีดจำกัดการรับค่า Form (แก้ไขปัญหา HTTP ERROR 400)
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.ValueCountLimit = 10000;           // ขยายจำนวน Keys/Inputs สูงสุดเป็น 10,000 ตัว (ค่าเดิมคือ 1,024)
+    options.ValueCountLimit = 10000;           // ขยายจำนวน Keys/Inputs สูงสุดเป็น 10,000 ตัว
     options.ValueLengthLimit = int.MaxValue;   // ขยายความยาวของข้อมูลในแต่ละช่อง
     options.MultipartBodyLengthLimit = int.MaxValue; // รองรับขนาด Body ของ Form
 });

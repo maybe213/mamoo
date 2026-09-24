@@ -313,24 +313,12 @@
                             <label class="form-label fw-semibold text-dark mb-1" style="font-size: 0.85rem;">
                                 กลุ่มหน่วยนับ <span class="text-danger">*</span>
                             </label>
-
-                            <select name="GroupName"
-                                    class="form-select"
-                                    required>
-                                <option value="">-- เลือกกลุ่มทางการแพทย์ --</option>
-                                <option value="1. กลุ่มหน่วยนับประเภท ยาเม็ด / แคปซูล / แผง">
-                                    1. กลุ่ม ยาเม็ด / แคปซูล / แผง
-                                </option>
-                                <option value="2. กลุ่มหน่วยนับประเภท ยาน้ำ / ยาทา / ยาดม">
-                                    2. กลุ่ม ยาน้ำ / ยาทา / ยาดม
-                                </option>
-                                <option value="3. กลุ่มหน่วยนับประเภท ยาฉีด (Injections)">
-                                    3. กลุ่ม ยาฉีด (Injections)
-                                </option>
-                                <option value="4. กลุ่มหน่วยนับประเภท เวชภัณฑ์มิใช่ยา (Supplies)">
-                                    4. กลุ่ม เวชภัณฑ์มิใช่ยา (Supplies)
-                                </option>
-                            </select>
+                            <!-- เปลี่ยนจาก <select> เป็น <input type="text"> เพื่อรับข้อความที่พิมพ์เข้ามา -->
+                            <input name="GroupName"
+                                   type="text"
+                                   class="form-control"
+                                   placeholder="พิมพ์กลุ่มหน่วยนับ เช่น ยาเม็ด, ยาน้ำ, เวชภัณฑ์"
+                                   required />
                         </div>
 
                         <div class="col-12">

@@ -88,7 +88,7 @@ namespace DrugInventoryPro.Controllers
             var availableItems = await _context.Medicines
                 .Include(m => m.Category)
                 .Include(m => m.MedicineUnit)
-                .Where(m => m.Stock > 0 && m.Status != "Inactive")
+                .Where(m => m.Stock > 0 && m.Status == "Active")
                 .OrderBy(m => m.Expired_at ?? DateTime.MaxValue)
                 .ThenBy(m => m.Medicine_name)
                 .ToListAsync();
@@ -148,7 +148,7 @@ namespace DrugInventoryPro.Controllers
                 .AsNoTracking()
                 .Include(m => m.Category)
                 .Include(m => m.MedicineUnit)
-                .Where(m => m.Status != "Inactive")
+                .Where(m => m.Status == "Active")
                 .ToListAsync();
 
             PopulateCatalogViewBag(allItems);

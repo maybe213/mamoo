@@ -157,11 +157,11 @@
             padding: 10px 6px;
         }
 
-        .nav-tabs-medical .nav-link.active {
-            color: var(--color-primary);
-            background-color: transparent;
-            border-bottom: 3px solid var(--color-primary);
-        }
+            .nav-tabs-medical .nav-link.active {
+                color: var(--color-primary);
+                background-color: transparent;
+                border-bottom: 3px solid var(--color-primary);
+            }
 
     /* Category badges */
     .badge-cat {
@@ -370,6 +370,14 @@
                                                     <td>
                                                         <span class="fw-semibold text-dark d-block">@med.Medicine_name</span>
                                                         <span class="badge badge-cat small mt-1"><i class="bi bi-tag me-1"></i>@cat</span>
+                                                        @if (!string.IsNullOrWhiteSpace(med.Lot))
+                                                        {
+                                                            <span class="small text-muted d-block mt-1"><i class="bi bi-upc-scan me-1"></i>Lot: @med.Lot (@med.Medicine_id)</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="small text-muted d-block mt-1">รหัส: @med.Medicine_id</span>
+                                                        }
                                                     </td>
                                                     <td class="text-center">
                                                         <span class="badge @expClass px-2 py-1">@expLabel</span>
@@ -393,7 +401,8 @@
                                                                     data-id="@med.Medicine_id" data-name="@med.Medicine_name"
                                                                     data-stock="@(med.Stock ?? 0)" data-unit="@unit"
                                                                     data-price="@med.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                                                    data-type="ยา" data-expiry="@expiryIso" data-expirylabel="@expLabel">
+                                                                    data-type="ยา" data-expiry="@expiryIso" data-expirylabel="@expLabel"
+                                                                    data-lot="@med.Lot">
                                                                 <i class="bi bi-plus-lg"></i>
                                                             </button>
                                                         }
@@ -459,6 +468,14 @@
                                                     <td>
                                                         <span class="fw-semibold text-dark d-block">@sup.Medicine_name</span>
                                                         <span class="badge badge-cat small mt-1"><i class="bi bi-tag me-1"></i>@cat</span>
+                                                        @if (!string.IsNullOrWhiteSpace(sup.Lot))
+                                                        {
+                                                            <span class="small text-muted d-block mt-1"><i class="bi bi-upc-scan me-1"></i>Lot: @sup.Lot (@sup.Medicine_id)</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="small text-muted d-block mt-1">รหัส: @sup.Medicine_id</span>
+                                                        }
                                                     </td>
                                                     <td class="text-center">
                                                         <span class="badge @expClass px-2 py-1">@expLabel</span>
@@ -482,7 +499,8 @@
                                                                     data-id="@sup.Medicine_id" data-name="@sup.Medicine_name"
                                                                     data-stock="@(sup.Stock ?? 0)" data-unit="@unit"
                                                                     data-price="@sup.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                                                    data-type="เวชภัณฑ์" data-expiry="@expiryIso" data-expirylabel="@expLabel">
+                                                                    data-type="เวชภัณฑ์" data-expiry="@expiryIso" data-expirylabel="@expLabel"
+                                                                    data-lot="@sup.Lot">
                                                                 <i class="bi bi-plus-lg"></i>
                                                             </button>
                                                         }
@@ -595,11 +613,12 @@
                 parseFloat($btn.data('price')) || 0,
                 $btn.data('type'),
                 $btn.data('expiry'),
-                $btn.data('expirylabel')
+                $btn.data('expirylabel'),
+                $btn.data('lot')
             );
         });
 
-        function addItem(id, name, stock, unit, price, type, expiryIso, expiryLabel) {
+        function addItem(id, name, stock, unit, price, type, expiryIso, expiryLabel, lot) {
             if (stock <= 0) { alert("รายการนี้หมดคลังชั่วคราว ไม่สามารถเบิกได้ครับ"); return; }
             if (expiryIso && new Date(expiryIso) < new Date(new Date().toDateString())) {
                 alert("รายการนี้หมดอายุแล้ว ไม่สามารถเบิกได้ครับ (นโยบาย FEFO)"); return;
@@ -617,12 +636,17 @@
                 ? `<span class="small text-muted d-block"><i class="bi bi-calendar-event me-1"></i>หมดอายุ: ${expiryLabel}</span>`
                 : '';
 
+            let lotLine = lot
+                ? `<span class="small text-muted d-block"><i class="bi bi-upc-scan me-1"></i>Lot: ${lot} (${id})</span>`
+                : `<span class="small text-muted d-block">รหัส: ${id}</span>`;
+
             let html = `
                 <tr id="row-${id}" data-price="${price}">
                     <td class="small">
                         <span class="fw-semibold text-dark d-block">${name}</span>
                         ${typeBadge}
                         ${expiryLine}
+                        ${lotLine}
                         <input type="hidden" name="MedicineIds" value="${id}">
                     </td>
                     <td>

@@ -108,6 +108,58 @@
             border-bottom: 1px solid var(--border-light);
         }
 
+    .dashboard-wrapper {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        transition: max-width 0.25s ease-in-out;
+    }
+
+    @@media (min-width: 1920px) {
+        .dashboard-wrapper {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+    }
+
+    @@media (max-width: 991.98px) {
+        .stat-value {
+            font-size: 19px;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+        }
+
+        .section-card {
+            padding: 1rem;
+        }
+
+        .chart-box {
+            height: 220px;
+        }
+    }
+
+    @@media (max-width: 575.98px) {
+        .stat-card {
+            padding: 12px 14px;
+        }
+
+        .stat-value {
+            font-size: 17px;
+        }
+
+        .dash-table th, .dash-table td {
+            font-size: 12px;
+            padding: 6px 8px;
+        }
+
+        .chart-box {
+            height: 200px;
+        }
+    }
     /* ========================================================= */
     /* 🛠️ Custom Mini FullCalendar สำหรับแสดงใน Stat Card */
     /* ========================================================= */
@@ -217,11 +269,11 @@
                         if (hasExpired) {
                             // 🔴 วงสีแดง - ยาหมดอายุแล้ว
                             info.el.classList.add('has-expired-date');
-                            info.el.title = "⚠️ มียาหมดอายุแล้ว คลิกเพื่อดูรายละเอียด";
+                            info.el.title = "มียาหมดอายุแล้ว คลิกเพื่อดูรายละเอียด";
                         } else {
                             // 🟡 วงสีเหลือง - ยาใกล้หมดอายุ
                             info.el.classList.add('has-expiring-soon-date');
-                            info.el.title = "⚡ มียาใกล้หมดอายุ คลิกเพื่อดูรายละเอียด";
+                            info.el.title = "มียาใกล้หมดอายุ คลิกเพื่อดูรายละเอียด";
                         }
                     }
                 },
@@ -261,454 +313,604 @@
     });
 </script>
 <!-- ================= 1. Top Stat Cards Row (4 รายการบนสุด) ================= -->
-<div class="row g-3 mb-4">
-    <!-- 1. รายการยาคลังทั้งหมด -->
-    <div class="col-xl-3 col-md-6 col-sm-6">
-        <a asp-controller="Medicines" asp-action="Catalog" class="text-decoration-none d-block h-100">
-            <div class="stat-card">
-                <div>
-                    <div class="stat-label">รายการคลังทั้งหมด</div>
-                    <div class="stat-value text-primary">
-                        @Convert.ToInt32(ViewBag.TotalMedicines ?? 0).ToString("N0")
-                        <span class="fs-6 text-muted fw-normal">รายการ</span>
+<div class="dashboard-wrapper">
+    <div class="row g-3 mb-4">
+        <!-- 1. รายการยาคลังทั้งหมด -->
+        <div class="col-xl-3 col-md-6 col-sm-6">
+            <a asp-controller="Medicines" asp-action="Catalog" class="text-decoration-none d-block h-100">
+                <div class="stat-card">
+                    <div>
+                        <div class="stat-label">รายการคลังทั้งหมด</div>
+                        <div class="stat-value text-primary">
+                            @Convert.ToInt32(ViewBag.TotalMedicines ?? 0).ToString("N0")
+                            <span class="fs-6 text-muted fw-normal">รายการ</span>
+                        </div>
+                    </div>
+                    <div class="stat-icon" style="background: var(--primary-light); color: var(--primary-blue);">
+                        <i class="bi bi-capsule"></i>
                     </div>
                 </div>
-                <div class="stat-icon" style="background: var(--primary-light); color: var(--primary-blue);">
-                    <i class="bi bi-capsule"></i>
+            </a>
+        </div>
+
+        <!-- 2. ปุ่มส่งออก Excel รบ 301 -->
+        <div class="col-xl-3 col-md-6 col-sm-6">
+            <button type="button" class="btn p-0 border-0 text-start w-100 h-100" data-bs-toggle="modal" data-bs-target="#exportReportModal">
+                <div class="stat-card" style="border-color: #A7F3D0;">
+                    <div>
+                        <div class="stat-label text-success"></i> รายงาน</div>
+                        <div class="stat-value text-success" style="font-size: 16px;">
+                            ส่งออก Excel <i class="bi bi-download ms-1 fs-6"></i>
+                        </div>
+                    </div>
+                    <div class="stat-icon" style="background: var(--success-light); color: var(--success-green);">
+                        <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+                    </div>
                 </div>
-            </div>
-        </a>
+            </button>
+        </div>
+
+        <div class="col-xl-3 col-md-6 col-sm-6">
+            <a asp-controller="Medicines" asp-action="LowStock" class="text-decoration-none d-block h-100" title="สูตร ROP: (อัตราการใช้/วัน × ระยะเวลารอสินค้า) + สต็อกสำรอง">
+                <div class="stat-card">
+                    <div>
+                        <div class="stat-label">สต็อกต่ำกว่าจุดสั่งซื้อ</div>
+                        <div class="stat-value" style="color: var(--warning-orange);">
+                            @Convert.ToInt32(ViewBag.LowStockCount ?? 0).ToString("N0")
+                            <span class="fs-6 text-muted fw-normal">รายการ</span>
+                        </div>
+                    </div>
+                    <div class="stat-icon" style="background: var(--warning-light); color: var(--warning-orange);">
+                        <i class="bi bi-box-arrow-in-down"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <!-- ยอดเบิกจ่ายเดือนนี้ -->
+        <div class="col-xl-3 col-md-6 col-sm-6">
+            <a asp-controller="Dispense" asp-action="History" class="text-decoration-none d-block h-100">
+                <div class="stat-card">
+                    <div>
+                        <div class="stat-label">ยอดเบิกจ่ายที่สำเร็จเดือนนี้</div>
+                        <div class="stat-value" style="color: var(--info-purple);">
+                            @Convert.ToInt32(ViewBag.CurrentMonthDispenseTotal ?? 0).ToString("N0")
+                            <span class="fs-6 text-muted fw-normal">ครั้ง</span>
+                        </div>
+                    </div>
+                    <div class="stat-icon" style="background: var(--info-light); color: var(--info-purple);">
+                        <i class="bi bi-cart-check-fill"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
     </div>
 
-    <!-- 2. ปุ่มส่งออก Excel รบ 301 -->
-    <div class="col-xl-3 col-md-6 col-sm-6">
-        <button type="button" class="btn p-0 border-0 text-start w-100 h-100" data-bs-toggle="modal" data-bs-target="#exportReportModal">
-            <div class="stat-card" style="border-color: #A7F3D0;">
-                <div>
-                    <div class="stat-label text-success"><i class="bi bi-file-earmark-excel-fill me-1"></i> รายงาน</div>
-                    <div class="stat-value text-success" style="font-size: 16px;">
-                        ส่งออก Excel <i class="bi bi-download ms-1 fs-6"></i>
-                    </div>
-                </div>
-                <div class="stat-icon" style="background: var(--success-light); color: var(--success-green);">
-                    <i class="bi bi-file-earmark-spreadsheet-fill"></i>
-                </div>
-            </div>
-        </button>
-    </div>
-
-    <div class="col-xl-3 col-md-6 col-sm-6">
-        <a asp-controller="Medicines" asp-action="LowStock" class="text-decoration-none d-block h-100" title="สูตร ROP: (อัตราการใช้/วัน × ระยะเวลารอสินค้า) + สต็อกสำรอง">
-            <div class="stat-card">
-                <div>
-                    <div class="stat-label">สต็อกต่ำกว่าจุดสั่งซื้อ</div>
-                    <div class="stat-value" style="color: var(--warning-orange);">
-                        @Convert.ToInt32(ViewBag.LowStockCount ?? 0).ToString("N0")
-                        <span class="fs-6 text-muted fw-normal">รายการ</span>
-                    </div>
-                </div>
-                <div class="stat-icon" style="background: var(--warning-light); color: var(--warning-orange);">
-                    <i class="bi bi-box-arrow-in-down"></i>
-                </div>
-            </div>
-        </a>
-    </div>
-    <!-- ยอดเบิกจ่ายเดือนนี้ -->
-    <div class="col-xl-3 col-md-6 col-sm-6">
-        <a asp-controller="Dispense" asp-action="History" class="text-decoration-none d-block h-100">
-            <div class="stat-card">
-                <div>
-                    <div class="stat-label">ยอดเบิกจ่ายที่สำเร็จเดือนนี้</div>
-                    <div class="stat-value" style="color: var(--info-purple);">
-                        @Convert.ToInt32(ViewBag.CurrentMonthDispenseTotal ?? 0).ToString("N0")
-                        <span class="fs-6 text-muted fw-normal">ครั้ง</span>
-                    </div>
-                </div>
-                <div class="stat-icon" style="background: var(--info-light); color: var(--info-purple);">
-                    <i class="bi bi-cart-check-fill"></i>
-                </div>
-            </div>
-        </a>
-    </div>
-</div>
-
-<div class="row g-3 mb-4 align-items-stretch">
-    <!-- ฝั่งซ้าย (2 สัดส่วน): Top 5 ยาเบิกจ่ายมากที่สุด & น้อยที่สุด -->
-    <div class="col-lg-8">
-        <div class="row g-3 h-100">
-            <!-- Top 5 ยาที่เบิกจ่ายมากที่สุด -->
-            <div class="col-md-6 d-flex flex-column">
-                <div class="section-card h-100 d-flex flex-column">
-                    <div class="section-title text-success mb-3">
-                        <i class="bi bi-graph-up-arrow fs-5"></i> เบิกจ่ายมากที่สุด 5 อันดับ
-                    </div>
-                    <div class="table-responsive flex-grow-1">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 15%;">อันดับ</th>
-                                    <th>ชื่อยา / เวชภัณฑ์</th>
-                                    <th class="text-end" style="width: 35%;">จำนวนเบิก</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @{
-                                    var top5Most = ViewBag.Top5MostDispensed as IEnumerable<dynamic>;
-                                    int rankMost = 1;
-                                }
-                                @if (top5Most != null && top5Most.Any())
-                                {
-                                    foreach (var item in top5Most)
-                                    {
-                                        <tr>
-                                            <td class="text-center fw-bold text-muted">@rankMost</td>
-                                            <td class="fw-semibold text-dark">@item.Name</td>
-                                            <td class="text-end"><span class="badge bg-success-subtle text-success fs-6 fw-bold">+@String.Format("{0:N0}", item.TotalQuantity)</span></td>
-                                        </tr>
-                                        rankMost++;
+    <div class="row g-3 mb-4 align-items-stretch">
+        <!-- ฝั่งซ้าย (2 สัดส่วน): Top 5 ยาเบิกจ่ายมากที่สุด & น้อยที่สุด -->
+        <div class="col-lg-8">
+            <div class="row g-3 h-100">
+                <!-- Top 5 ยาที่เบิกจ่ายมากที่สุด -->
+                <div class="col-md-6 d-flex flex-column">
+                    <div class="section-card h-100 d-flex flex-column">
+                        <div class="section-title text-success mb-3">
+                            <i class="bi bi-graph-up-arrow fs-5"></i> เบิกจ่ายมากที่สุด 5 อันดับ
+                        </div>
+                        <div class="table-responsive flex-grow-1">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 15%;">อันดับ</th>
+                                        <th>ชื่อยา / เวชภัณฑ์</th>
+                                        <th class="text-end" style="width: 35%;">จำนวนเบิก</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        var top5Most = ViewBag.Top5MostDispensed as IEnumerable<dynamic>;
+                                        int rankMost = 1;
                                     }
-                                }
-                                else
-                                {
-                                    <tr><td colspan="3" class="text-center text-muted py-3">ยังไม่มีข้อมูลการเบิกจ่าย</td></tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Top 5 ยาที่เบิกจ่ายน้อยที่สุด -->
-            <div class="col-md-6 d-flex flex-column">
-                <div class="section-card h-100 d-flex flex-column">
-                    <div class="section-title text-warning mb-3">
-                        <i class="bi bi-graph-down-arrow fs-5"></i> เบิกจ่ายน้อยที่สุด 5 อันดับ
-                    </div>
-                    <div class="table-responsive flex-grow-1">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 15%;">อันดับ</th>
-                                    <th>ชื่อยา / เวชภัณฑ์</th>
-                                    <th class="text-end" style="width: 35%;">จำนวนเบิก</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @{
-                                    var top5Least = ViewBag.Top5LeastDispensed as IEnumerable<dynamic>;
-                                    int rankLeast = 1;
-                                }
-                                @if (top5Least != null && top5Least.Any())
-                                {
-                                    foreach (var item in top5Least)
+                                    @if (top5Most != null && top5Most.Any())
                                     {
-                                        <tr>
-                                            <td class="text-center fw-bold text-muted">@rankLeast</td>
-                                            <td class="fw-semibold text-dark">@item.Name</td>
-                                            <td class="text-end"><span class="badge bg-warning-subtle text-warning-emphasis fs-6 fw-bold">@String.Format("{0:N0}", item.TotalQuantity)</span></td>
-                                        </tr>
-                                        rankLeast++;
+                                        foreach (var item in top5Most)
+                                        {
+                                            <tr>
+                                                <td class="text-center fw-bold text-muted">@rankMost</td>
+                                                <td class="fw-semibold text-dark">@item.Name</td>
+                                                <td class="text-end"><span class="badge bg-success-subtle text-success fs-6 fw-bold">@String.Format("{0:N0}", item.TotalQuantity)</span></td>
+                                            </tr>
+                                            rankMost++;
+                                        }
                                     }
-                                }
-                                else
-                                {
-                                    <tr><td colspan="3" class="text-center text-muted py-3">ยังไม่มีข้อมูลการเบิกจ่าย</td></tr>
-                                }
-                            </tbody>
-                        </table>
+                                    else
+                                    {
+                                        <tr><td colspan="3" class="text-center text-muted py-3">ยังไม่มีข้อมูลการเบิกจ่าย</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top 5 ยาที่เบิกจ่ายน้อยที่สุด -->
+                <div class="col-md-6 d-flex flex-column">
+                    <div class="section-card h-100 d-flex flex-column">
+                        <div class="section-title text-warning mb-3">
+                            <i class="bi bi-graph-down-arrow fs-5"></i> เบิกจ่ายน้อยที่สุด 5 อันดับ
+                        </div>
+                        <div class="table-responsive flex-grow-1">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 15%;">อันดับ</th>
+                                        <th>ชื่อยา / เวชภัณฑ์</th>
+                                        <th class="text-end" style="width: 35%;">จำนวนเบิก</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        var top5Least = ViewBag.Top5LeastDispensed as IEnumerable<dynamic>;
+                                        int rankLeast = 1;
+                                    }
+                                    @if (top5Least != null && top5Least.Any())
+                                    {
+                                        foreach (var item in top5Least)
+                                        {
+                                            <tr>
+                                                <td class="text-center fw-bold text-muted">@rankLeast</td>
+                                                <td class="fw-semibold text-dark">@item.Name</td>
+                                                <td class="text-end"><span class="badge bg-warning-subtle text-warning-emphasis fs-6 fw-bold">@String.Format("{0:N0}", item.TotalQuantity)</span></td>
+                                            </tr>
+                                            rankLeast++;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr><td colspan="3" class="text-center text-muted py-3">ยังไม่มีข้อมูลการเบิกจ่าย</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- ฝั่งขวา (1 สัดส่วน): ปฏิทินติดตามวันหมดอายุแบบย่อ -->
-    <div class="col-lg-4 d-flex flex-column">
-        <div class="stat-card flex-column align-items-stretch p-3 h-100" style="border-color: #FECACA;">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <div class="stat-label text-danger mb-0 fs-6 fw-bold">
-                    <i class="bi bi-calendar3 me-1"></i> ปฏิทินวันหมดอายุ
+        <!-- ฝั่งขวา (1 สัดส่วน): ปฏิทินติดตามวันหมดอายุแบบย่อ -->
+        <div class="col-lg-4 d-flex flex-column">
+            <div class="stat-card flex-column align-items-stretch p-3 h-100" style="border-color: #FECACA;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="stat-label text-danger mb-0 fs-6 fw-bold">
+                        <i class="bi bi-calendar3 me-1"></i> ปฏิทินวันหมดอายุ
+                    </div>
+                    <div class="d-flex gap-2" style="font-size: 10.5px;">
+                        <span class="text-danger fw-bold">🔴 หมดอายุ</span>
+                        <span class="text-warning-emphasis fw-bold">🟡 ใกล้หมด</span>
+                    </div>
                 </div>
-                <div class="d-flex gap-2" style="font-size: 10.5px;">
-                    <span class="text-danger fw-bold">🔴 หมดอายุ</span>
-                    <span class="text-warning-emphasis fw-bold">🟡 ใกล้หมด</span>
+
+                <!-- ตัวปฏิทิน Mini ข้างขวา -->
+                <div id="inlineMedicineCalendar" class="w-100 flex-grow-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 3. Reports Summary Row ================= -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-dark mb-0 fs-5">
+                <i class="bi bi-file-earmark-bar-graph-fill text-primary"></i> รายงานสรุปผลการดำเนินงานทางคลังเวชภัณฑ์ประจำงวด
+            </h6>
+            <span class="badge" style="background: var(--success-light); color: var(--success-green); font-size: 12px; padding: 6px 12px; border-radius: 30px;">
+                <i class="bi bi-lightning-fill"></i> อัปเดตเรียลไทม์รายวัน
+            </span>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="report-card">
+                    <div class="report-badge" style="background-color: var(--info-light);">WEEKLY LIVE</div>
+                    <h6 class="fw-bold mb-1">รายงานประจำ 1 สัปดาห์</h6>
+                    <p class="text-muted small">สรุปยอดรับเข้า-จ่ายออกจริงในรอบ 7 วันล่าสุด</p>
+                    <table class="dash-table mt-2">
+                        <thead><tr><th>รายการเคลื่อนไหว</th><th style="text-align:right">จำนวนรวม</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td><i class="bi bi-arrow-down-left-circle text-success me-1"></i> รับเข้า (Inbound)</td>
+                                <td style="text-align:right" class="text-success fw-bold">+ @String.Format("{0:N0}", ViewBag.WeeklyInboundCount ?? 0)</td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-arrow-up-right-circle text-danger me-1"></i> เบิกจ่าย (Outbound)</td>
+                                <td style="text-align:right" class="text-danger fw-bold">- @String.Format("{0:N0}", ViewBag.WeeklyOutboundCount ?? 0)</td>
+                            </tr>
+                            <tr class="fw-bold" style="background-color: #F9FAFB;">
+                                <td>ดุลคลังสุทธิ</td>
+                                <td style="text-align:right;">
+                                    @((ViewBag.WeeklyNetStock ?? 0) >= 0 ? "+" : "")@String.Format("{0:N0}", ViewBag.WeeklyNetStock ?? 0)
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- ตัวปฏิทิน Mini ข้างขวา -->
-            <div id="inlineMedicineCalendar" class="w-100 flex-grow-1"></div>
-        </div>
-    </div>
-</div>
-
-<!-- ================= 3. Reports Summary Row ================= -->
-<div class="mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="fw-bold text-dark mb-0 fs-5">
-            <i class="bi bi-file-earmark-bar-graph-fill text-primary"></i> รายงานสรุปผลการดำเนินงานทางคลังเวชภัณฑ์ประจำงวด
-        </h6>
-        <span class="badge" style="background: var(--success-light); color: var(--success-green); font-size: 12px; padding: 6px 12px; border-radius: 30px;">
-            <i class="bi bi-lightning-fill"></i> อัปเดตเรียลไทม์รายวัน
-        </span>
-    </div>
-
-    <div class="row g-3">
-        <div class="col-md-4">
-            <div class="report-card">
-                <div class="report-badge" style="background-color: var(--info-light);">WEEKLY LIVE</div>
-                <h6 class="fw-bold mb-1">รายงานประจำ 1 สัปดาห์</h6>
-                <p class="text-muted small">สรุปยอดรับเข้า-จ่ายออกจริงในรอบ 7 วันล่าสุด</p>
-                <table class="dash-table mt-2">
-                    <thead><tr><th>รายการเคลื่อนไหว</th><th style="text-align:right">จำนวนรวม</th></tr></thead>
-                    <tbody>
-                        <tr>
-                            <td><i class="bi bi-arrow-down-left-circle text-success me-1"></i> รับเข้า (Inbound)</td>
-                            <td style="text-align:right" class="text-success fw-bold">+ @String.Format("{0:N0}", ViewBag.WeeklyInboundCount ?? 0)</td>
-                        </tr>
-                        <tr>
-                            <td><i class="bi bi-arrow-up-right-circle text-danger me-1"></i> เบิกจ่าย (Outbound)</td>
-                            <td style="text-align:right" class="text-danger fw-bold">- @String.Format("{0:N0}", ViewBag.WeeklyOutboundCount ?? 0)</td>
-                        </tr>
-                        <tr class="fw-bold" style="background-color: #F9FAFB;">
-                            <td>ดุลคลังสุทธิ</td>
-                            <td style="text-align:right;">
-                                @((ViewBag.WeeklyNetStock ?? 0) >= 0 ? "+" : "")@String.Format("{0:N0}", ViewBag.WeeklyNetStock ?? 0)
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="col-md-4">
+                <div class="report-card">
+                    <div class="report-badge" style="background-color: var(--info-light);">MONTHLY LIVE</div>
+                    <h6 class="fw-bold mb-1">รายงานประจำเดือน</h6>
+                    <p class="text-muted small">สรุปยอดรับเข้า-จ่ายออกจริงในรอบเดือนนี้</p>
+                    <table class="dash-table mt-2">
+                        <thead><tr><th>รายการเคลื่อนไหว</th><th style="text-align:right">จำนวนรวม</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td><i class="bi bi-arrow-down-left-circle text-success me-1"></i> รับเข้า (Inbound)</td>
+                                <td style="text-align:right" class="text-success fw-bold">+ @String.Format("{0:N0}", ViewBag.MonthlyInboundCount ?? 0)</td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-arrow-up-right-circle text-danger me-1"></i> เบิกจ่าย (Outbound)</td>
+                                <td style="text-align:right" class="text-danger fw-bold">- @String.Format("{0:N0}", ViewBag.MonthlyOutboundCount ?? 0)</td>
+                            </tr>
+                            <tr class="fw-bold" style="background-color: #F9FAFB;">
+                                <td>ดุลคลังสุทธิ</td>
+                                <td style="text-align:right;">
+                                    @((ViewBag.MonthlyNetStock ?? 0) >= 0 ? "+" : "")@String.Format("{0:N0}", ViewBag.MonthlyNetStock ?? 0)
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
 
-        <div class="col-md-4">
-            <div class="report-card">
-                <div class="report-badge" style="background-color: var(--info-light);">MONTHLY LIVE</div>
-                <h6 class="fw-bold mb-1">รายงานประจำเดือน</h6>
-                <p class="text-muted small">สรุปยอดรับเข้า-จ่ายออกจริงในรอบเดือนนี้</p>
-                <table class="dash-table mt-2">
-                    <thead><tr><th>รายการเคลื่อนไหว</th><th style="text-align:right">จำนวนรวม</th></tr></thead>
-                    <tbody>
-                        <tr>
-                            <td><i class="bi bi-arrow-down-left-circle text-success me-1"></i> รับเข้า (Inbound)</td>
-                            <td style="text-align:right" class="text-success fw-bold">+ @String.Format("{0:N0}", ViewBag.MonthlyInboundCount ?? 0)</td>
-                        </tr>
-                        <tr>
-                            <td><i class="bi bi-arrow-up-right-circle text-danger me-1"></i> เบิกจ่าย (Outbound)</td>
-                            <td style="text-align:right" class="text-danger fw-bold">- @String.Format("{0:N0}", ViewBag.MonthlyOutboundCount ?? 0)</td>
-                        </tr>
-                        <tr class="fw-bold" style="background-color: #F9FAFB;">
-                            <td>ดุลคลังสุทธิ</td>
-                            <td style="text-align:right;">
-                                @((ViewBag.MonthlyNetStock ?? 0) >= 0 ? "+" : "")@String.Format("{0:N0}", ViewBag.MonthlyNetStock ?? 0)
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="report-card">
-                <div class="report-badge" style="background-color: var(--info-light);">ANNUAL LIVE</div>
-                <h6 class="fw-bold mb-1">รายงานประจำปี</h6>
-                <p class="text-muted small">สรุปยอดรับเข้า-จ่ายออกจริงในรอบปีนี้</p>
-                <table class="dash-table mt-2">
-                    <thead><tr><th>รายการเคลื่อนไหว</th><th style="text-align:right">จำนวนรวม</th></tr></thead>
-                    <tbody>
-                        <tr>
-                            <td><i class="bi bi-arrow-down-left-circle text-success me-1"></i> รับเข้า (Inbound)</td>
-                            <td style="text-align:right" class="text-success fw-bold">+ @String.Format("{0:N0}", ViewBag.YearlyInboundCount ?? 0)</td>
-                        </tr>
-                        <tr>
-                            <td><i class="bi bi-arrow-up-right-circle text-danger me-1"></i> เบิกจ่าย (Outbound)</td>
-                            <td style="text-align:right" class="text-danger fw-bold">- @String.Format("{0:N0}", ViewBag.YearlyOutboundCount ?? 0)</td>
-                        </tr>
-                        <tr class="fw-bold" style="background-color: #F9FAFB;">
-                            <td>ดุลคลังสุทธิ</td>
-                            <td style="text-align:right;">
-                                @((ViewBag.YearlyNetStock ?? 0) >= 0 ? "+" : "")@String.Format("{0:N0}", ViewBag.YearlyNetStock ?? 0)
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="col-md-4">
+                <div class="report-card">
+                    <div class="report-badge" style="background-color: var(--info-light);">ANNUAL LIVE</div>
+                    <h6 class="fw-bold mb-1">รายงานประจำปี</h6>
+                    <p class="text-muted small">สรุปยอดรับเข้า-จ่ายออกจริงในรอบปีนี้</p>
+                    <table class="dash-table mt-2">
+                        <thead><tr><th>รายการเคลื่อนไหว</th><th style="text-align:right">จำนวนรวม</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td><i class="bi bi-arrow-down-left-circle text-success me-1"></i> รับเข้า (Inbound)</td>
+                                <td style="text-align:right" class="text-success fw-bold">+ @String.Format("{0:N0}", ViewBag.YearlyInboundCount ?? 0)</td>
+                            </tr>
+                            <tr>
+                                <td><i class="bi bi-arrow-up-right-circle text-danger me-1"></i> เบิกจ่าย (Outbound)</td>
+                                <td style="text-align:right" class="text-danger fw-bold">- @String.Format("{0:N0}", ViewBag.YearlyOutboundCount ?? 0)</td>
+                            </tr>
+                            <tr class="fw-bold" style="background-color: #F9FAFB;">
+                                <td>ดุลคลังสุทธิ</td>
+                                <td style="text-align:right;">
+                                    @((ViewBag.YearlyNetStock ?? 0) >= 0 ? "+" : "")@String.Format("{0:N0}", ViewBag.YearlyNetStock ?? 0)
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- ================= 4. Charts Row ================= -->
-<div class="row g-3 mb-4">
-    <div class="col-md-5">
-        <div class="section-card">
-            <div class="section-title"><i class="bi bi-pie-chart-fill text-primary"></i> สถิติสถานะการเบิกจ่าย</div>
-            <div style="height:250px; display:flex; align-items:center; justify-content:center;">
-                <canvas id="oneMonthChart"></canvas>
+    <!-- ================= 4. Charts Row ================= -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-5">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-pie-chart-fill text-primary"></i> สถิติสถานะการเบิกจ่าย</div>
+                <div style="height:250px; display:flex; align-items:center; justify-content:center;">
+                    <canvas id="oneMonthChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-graph-up text-primary"></i> ปริมาณคำขอเบิกจ่ายย้อนหลัง 6 เดือน</div>
+                <div style="height:250px;">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-7">
-        <div class="section-card">
-            <div class="section-title"><i class="bi bi-graph-up text-primary"></i> ปริมาณคำขอเบิกจ่ายย้อนหลัง 6 เดือน</div>
-            <div style="height:250px;">
-                <canvas id="monthlyChart"></canvas>
+
+    <!-- ================= 5. Disease Trend Analytics (วิเคราะห์แนวโน้มโรค) ================= -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-5">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-bar-chart-fill text-danger"></i> อันดับโรคเสี่ยงสูงสุด (Top Diseases)</div>
+                <div style="height:280px;">
+                    <canvas id="topDiseaseChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-activity text-danger"></i> แนวโน้มการเกิดโรครายเดือน (Disease Trends)</div>
+                <div style="height:280px;">
+                    <canvas id="diseaseTrendChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- ================= MODALS ================= -->
-<!-- Modal 1: แสดงรายการยาเมื่อคลิกวันที่บนปฏิทิน -->
-<div class="modal fade" id="expiryMedicineModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow" style="border-radius: 12px;">
-            <div class="modal-header border-bottom bg-danger text-white">
-                <h6 class="modal-title fw-bold text-white">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i> รายการยาหมดอายุ / ใกล้หมดอายุ
-                </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="row g-3 mb-4">
+        <div class="col-md-5">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-pie-chart-fill text-danger"></i> กระจายความเสี่ยงตามแผนก (Department Risk)</div>
+                <div style="height:280px; display:flex; align-items:center; justify-content:center;">
+                    <canvas id="departmentRiskChart"></canvas>
+                </div>
             </div>
-            <div class="modal-body p-4">
-                <p class="fw-semibold mb-3 text-muted">ประจำวันที่: <span id="modalDateLabel" class="text-dark fw-bold"></span></p>
-                <div id="modalMedicineList"></div>
-            </div>
-            <div class="modal-footer border-top-0 pt-0">
-                <button type="button" class="btn btn-light fw-semibold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+        </div>
+        <div class="col-md-7">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-list-ol text-danger"></i> รายละเอียดกลุ่มโรค (ตามปริมาณจ่ายยาสะสม)</div>
+                <div class="table-responsive" style="max-height:280px;">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>กลุ่มโรค (Related Disease)</th>
+                                <th class="text-end">จำนวนที่จ่าย</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var diseaseLabelsForTable = (ViewBag.TopDiseaseLabels as List<string>) ?? new List<string>();
+                                var diseaseDataForTable = (ViewBag.TopDiseaseData as List<int>) ?? new List<int>();
+                            }
+                            @if (diseaseLabelsForTable.Count == 0)
+                            {
+                                <tr><td colspan="2" class="text-center text-muted py-3">ยังไม่มีข้อมูลกลุ่มโรคที่เชื่อมโยงกับยา</td></tr>
+                            }
+                            else
+                            {
+                                for (int i = 0; i < diseaseLabelsForTable.Count; i++)
+                                {
+                                    <tr>
+                                        <td>@diseaseLabelsForTable[i]</td>
+                                        <td class="text-end fw-semibold">@String.Format("{0:N0}", diseaseDataForTable[i])</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal 2: ดาวน์โหลดรายงานแบบ รบ 301 -->
-<div class="modal fade" id="exportReportModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow" style="border-radius: 16px;">
-            <div class="modal-header border-bottom bg-success text-white">
-                <h6 class="modal-title fw-bold text-white fs-5">
-                    <i class="bi bi-file-earmark-spreadsheet-fill me-2"></i> ส่งออกรายงานแบบรบ 301 (Excel)
-                </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form asp-controller="Dashboard" asp-action="ExportDrugstoreReport" method="get">
+    <!-- ================= MODALS ================= -->
+    <!-- Modal 1: แสดงรายการยาเมื่อคลิกวันที่บนปฏิทิน -->
+    <div class="modal fade" id="expiryMedicineModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow" style="border-radius: 12px;">
+                <div class="modal-header border-bottom bg-danger text-white">
+                    <h6 class="modal-title fw-bold text-white">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> รายการยาหมดอายุ / ใกล้หมดอายุ
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
                 <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <label for="startDate" class="form-label fw-semibold text-secondary">ตั้งแต่วันที่:</label>
-                        <input type="date" id="startDate" name="startDate" class="form-control" required value="@(new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).ToString("yyyy-MM-dd"))" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="endDate" class="form-label fw-semibold text-secondary">ถึงวันที่:</label>
-                        <input type="date" id="endDate" name="endDate" class="form-control" required value="@DateTime.Now.ToString("yyyy-MM-dd")" />
-                    </div>
+                    <p class="fw-semibold mb-3 text-muted">ประจำวันที่: <span id="modalDateLabel" class="text-dark fw-bold"></span></p>
+                    <div id="modalMedicineList"></div>
                 </div>
-                <div class="modal-footer border-top-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-download me-1"></i> ดาวน์โหลด Excel</button>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-light fw-semibold" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- ================= Scripts ================= -->
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Modal 2: ดาวน์โหลดรายงานแบบ รบ 301 -->
+    <div class="modal fade" id="exportReportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow" style="border-radius: 16px;">
+                <div class="modal-header border-bottom bg-success text-white">
+                    <h6 class="modal-title fw-bold text-white fs-5">
+                        <i class="bi bi-file-earmark-spreadsheet-fill me-2"></i> ส่งออกรายงานแบบรบ 301 (Excel)
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form asp-controller="Dashboard" asp-action="ExportDrugstoreReport" method="get">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label for="startDate" class="form-label fw-semibold text-secondary">ตั้งแต่วันที่:</label>
+                            <input type="date" id="startDate" name="startDate" class="form-control" required value="@(new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).ToString("yyyy-MM-dd"))" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="endDate" class="form-label fw-semibold text-secondary">ถึงวันที่:</label>
+                            <input type="date" id="endDate" name="endDate" class="form-control" required value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-download me-1"></i> ดาวน์โหลด Excel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-<script>
-    var expiringMedicinesList = @Html.Raw(Json.Serialize(ViewBag.ExpiringMedicineDetails ?? new List<object>()));
-    var expiredDates = @Html.Raw(Json.Serialize(ViewBag.ExpiredDatesJson ?? new List<string>()));
+    <!-- ================= Scripts ================= -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initializing Inline Calendar (ฝั่งขวา)
-        var inlineCalendarEl = document.getElementById('inlineMedicineCalendar');
-        if (inlineCalendarEl) {
-            var inlineCalendar = new FullCalendar.Calendar(inlineCalendarEl, {
-                initialView: 'dayGridMonth',
-                locale: 'th',
-                height: 380,
-                headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
-                dayCellDidMount: function(info) {
-                    var dateStr = info.date.toLocaleDateString('sv-SE');
-                    if (expiredDates && expiredDates.includes(dateStr)) {
-                        info.el.classList.add('has-expiry-date');
-                        info.el.title = "⚠️ คลิกเพื่อดูรายการยาหมดอายุ/ใกล้หมดอายุ";
+    <script>
+        var expiringMedicinesList = @Html.Raw(Json.Serialize(ViewBag.ExpiringMedicineDetails ?? new List<object>()));
+        var expiredDates = @Html.Raw(Json.Serialize(ViewBag.ExpiredDatesJson ?? new List<string>()));
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initializing Inline Calendar (ฝั่งขวา)
+            var inlineCalendarEl = document.getElementById('inlineMedicineCalendar');
+            if (inlineCalendarEl) {
+                var inlineCalendar = new FullCalendar.Calendar(inlineCalendarEl, {
+                    initialView: 'dayGridMonth',
+                    locale: 'th',
+                    height: 380,
+                    headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
+                    dayCellDidMount: function(info) {
+                        var dateStr = info.date.toLocaleDateString('sv-SE');
+                        if (expiredDates && expiredDates.includes(dateStr)) {
+                            info.el.classList.add('has-expiry-date');
+                            info.el.title = "⚠️ คลิกเพื่อดูรายการยาหมดอายุ/ใกล้หมดอายุ";
+                        }
+                    },
+                    dateClick: function(info) {
+                        var dateStr = info.dateStr;
+                        var medsOnThisDate = expiringMedicinesList.filter(function(m) { return m.dateStr === dateStr; });
+
+                        if (medsOnThisDate.length > 0) {
+                            var displayDate = new Date(dateStr).toLocaleDateString('th-TH', {
+                                year: 'numeric', month: 'long', day: 'numeric'
+                            });
+                            document.getElementById('modalDateLabel').innerText = displayDate;
+
+                            var htmlList = '<ul class="list-group list-group-flush border rounded">';
+                            medsOnThisDate.forEach(function(med) {
+                                var badgeClass = med.isExpired ? 'bg-danger' : 'bg-warning text-dark';
+                                var statusText = med.isExpired ? 'หมดอายุแล้ว' : 'ใกล้หมดอายุ';
+
+                                htmlList += '<li class="list-group-item d-flex justify-content-between align-items-center py-2">'
+                                         + '<div><div class="fw-bold text-dark">' + med.name + '</div>'
+                                         + '<small class="text-muted">คงเหลือในคลัง: ' + med.stock + ' ' + med.unit + '</small></div>'
+                                         + '<span class="badge ' + badgeClass + ' rounded-pill">' + statusText + '</span></li>';
+                            });
+                            htmlList += '</ul>';
+
+                            document.getElementById('modalMedicineList').innerHTML = htmlList;
+                            var detailModal = new bootstrap.Modal(document.getElementById('expiryMedicineModal'));
+                            detailModal.show();
+                        }
                     }
+                });
+                inlineCalendar.render();
+            }
+
+            // Chart.js Configuration - Doughnut Chart
+            new Chart(document.getElementById('oneMonthChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['อนุมัติสำเร็จ', 'รอดำเนินการ', 'ปฏิเสธ/ยกเลิก'],
+                    datasets: [{
+                        data: [@(ViewBag.ApprovedDispense ?? 0), @(ViewBag.PendingDispense ?? 0), @(ViewBag.RejectedDispense ?? 0)],
+                        backgroundColor: ['#059669', '#D97706', '#DC2626'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
                 },
-                dateClick: function(info) {
-                    var dateStr = info.dateStr;
-                    var medsOnThisDate = expiringMedicinesList.filter(function(m) { return m.dateStr === dateStr; });
-
-                    if (medsOnThisDate.length > 0) {
-                        var displayDate = new Date(dateStr).toLocaleDateString('th-TH', {
-                            year: 'numeric', month: 'long', day: 'numeric'
-                        });
-                        document.getElementById('modalDateLabel').innerText = displayDate;
-
-                        var htmlList = '<ul class="list-group list-group-flush border rounded">';
-                        medsOnThisDate.forEach(function(med) {
-                            var badgeClass = med.isExpired ? 'bg-danger' : 'bg-warning text-dark';
-                            var statusText = med.isExpired ? 'หมดอายุแล้ว' : 'ใกล้หมดอายุ';
-
-                            htmlList += '<li class="list-group-item d-flex justify-content-between align-items-center py-2">'
-                                     + '<div><div class="fw-bold text-dark">' + med.name + '</div>'
-                                     + '<small class="text-muted">คงเหลือในคลัง: ' + med.stock + ' ' + med.unit + '</small></div>'
-                                     + '<span class="badge ' + badgeClass + ' rounded-pill">' + statusText + '</span></li>';
-                        });
-                        htmlList += '</ul>';
-
-                        document.getElementById('modalMedicineList').innerHTML = htmlList;
-                        var detailModal = new bootstrap.Modal(document.getElementById('expiryMedicineModal'));
-                        detailModal.show();
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
                     }
                 }
             });
-            inlineCalendar.render();
-        }
 
-        // Chart.js Configuration - Doughnut Chart
-        new Chart(document.getElementById('oneMonthChart'), {
-            type: 'doughnut',
-            data: {
-                labels: ['อนุมัติสำเร็จ', 'รอดำเนินการ', 'ปฏิเสธ/ยกเลิก'],
-                datasets: [{
-                    data: [@(ViewBag.ApprovedDispense ?? 0), @(ViewBag.PendingDispense ?? 0), @(ViewBag.RejectedDispense ?? 0)],
-                    backgroundColor: ['#059669', '#D97706', '#DC2626'],
-                    borderWidth: 2,
-                    borderColor: '#ffffff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
+            // Chart.js Configuration - Line Chart
+            new Chart(document.getElementById('monthlyChart'), {
+                type: 'line',
+                data: {
+                    labels: ['5 เดือนก่อน', '4 เดือนก่อน', '3 เดือนก่อน', '2 เดือนก่อน', 'เดือนที่แล้ว', 'เดือนนี้'],
+                    datasets: [{
+                        label: 'จำนวนคำขอเบิกจ่าย',
+                        data: @Html.Raw(Json.Serialize(ViewBag.MonthlyUsage ?? new List<int>())),
+                        borderColor: '#2563EB',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#2563EB'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#F3F4F6' } },
+                        x: { grid: { display: false } }
+                    }
                 }
-            }
-        });
+            });
 
-        // Chart.js Configuration - Line Chart
-        new Chart(document.getElementById('monthlyChart'), {
-            type: 'line',
-            data: {
-                labels: ['5 เดือนก่อน', '4 เดือนก่อน', '3 เดือนก่อน', '2 เดือนก่อน', 'เดือนที่แล้ว', 'เดือนนี้'],
-                datasets: [{
-                    label: 'จำนวนคำขอเบิกจ่าย',
-                    data: @Html.Raw(Json.Serialize(ViewBag.MonthlyUsage ?? new List<int>())),
-                    borderColor: '#2563EB',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    fill: true,
+            // ===== Disease Trend Analytics: สีชุดใช้ร่วมกันระหว่างกราฟ =====
+            var diseaseColors = ['#DC2626', '#2563EB', '#059669', '#D97706', '#7C3AED', '#DB2777', '#0891B2', '#65A30D'];
+
+            // Chart.js Configuration - Bar Chart: อันดับโรคเสี่ยงสูงสุด
+            new Chart(document.getElementById('topDiseaseChart'), {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(ViewBag.TopDiseaseLabels ?? new List<string>())),
+                    datasets: [{
+                        label: 'จำนวนที่จ่าย',
+                        data: @Html.Raw(Json.Serialize(ViewBag.TopDiseaseData ?? new List<int>())),
+                        backgroundColor: diseaseColors[0],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: '#F3F4F6' } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Chart.js Configuration - Line Chart: แนวโน้มการเกิดโรครายเดือน
+            var diseaseTrendLabels = @Html.Raw(Json.Serialize(ViewBag.DiseaseTrendMonthLabels ?? new List<string>()));
+            var diseaseTrendSeriesRaw = @Html.Raw(Json.Serialize(ViewBag.DiseaseTrendSeries ?? new Dictionary<string, List<int>>()));
+            var diseaseTrendDatasets = Object.keys(diseaseTrendSeriesRaw).map(function (name, idx) {
+                var color = diseaseColors[idx % diseaseColors.length];
+                return {
+                    label: name,
+                    data: diseaseTrendSeriesRaw[name],
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    fill: false,
                     tension: 0.3,
-                    pointBackgroundColor: '#2563EB'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, grid: { color: '#F3F4F6' } },
-                    x: { grid: { display: false } }
+                    pointBackgroundColor: color
+                };
+            });
+
+            new Chart(document.getElementById('diseaseTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: diseaseTrendLabels,
+                    datasets: diseaseTrendDatasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#F3F4F6' } },
+                        x: { grid: { display: false } }
+                    }
                 }
-            }
+            });
+
+            // Chart.js Configuration - Donut Chart: กระจายความเสี่ยงตามแผนก
+            new Chart(document.getElementById('departmentRiskChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(ViewBag.DepartmentRiskLabels ?? new List<string>())),
+                    datasets: [{
+                        data: @Html.Raw(Json.Serialize(ViewBag.DepartmentRiskData ?? new List<int>())),
+                        backgroundColor: diseaseColors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
+                    }
+                }
+            });
         });
-    });
-</script>
+    </script>

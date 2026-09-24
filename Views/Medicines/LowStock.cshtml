@@ -2,6 +2,14 @@
 
 @{
     ViewData["Title"] = "ระบบแจ้งเตือนสต็อกต่ำอัตโนมัติ (Automated ROP Alert)";
+    var items = Model?.ToList() ?? new List<DrugInventoryPro.Models.LowStockViewModel>();
+
+    int totalCount = items.Count;
+    int criticalCount = items.Count(x => x.IsCritical);
+    int reorderCount = items.Count(x => x.IsReorder && !x.IsCritical);
+    int expiredCount = items.Count(x => x.IsExpired);
+    int expiringCount = items.Count(x => x.IsExpiringSoon && !x.IsExpired);
+    decimal totalEstimatedCost = items.Sum(x => x.Medicine.Price * x.SuggestedROQ);
 }
 
 <style>
@@ -16,6 +24,8 @@
         --alert-danger-bg: #FEF2F2;
         --alert-warning-text: #D97706;
         --alert-warning-bg: #FFFBEB;
+        --alert-info-text: #2563EB;
+        --alert-info-bg: #EFF6FF;
     }
 
     body {
@@ -35,6 +45,84 @@
         font-size: 0.875rem;
     }
 
+    /* ---------- Stat Cards ---------- */
+    .stat-card {
+        border: 1px solid var(--med-border);
+        border-radius: 12px;
+        background: var(--med-card-bg);
+        padding: 16px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 100%;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+        cursor: pointer;
+        transition: box-shadow .15s ease, transform .15s ease;
+    }
+
+        .stat-card:hover {
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+        }
+
+        .stat-card.active {
+            outline: none;
+        }
+
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+
+    .stat-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: var(--med-text-muted);
+        font-weight: 600;
+    }
+
+    /* ---------- Toolbar ---------- */
+    .toolbar {
+        border: 1px solid var(--med-border);
+        border-radius: 12px;
+        background: var(--med-card-bg);
+        padding: 12px 16px;
+    }
+
+    .filter-pill {
+        border: 1px solid var(--med-border);
+        background: #fff;
+        color: var(--med-text-muted);
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 0.825rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+        .filter-pill.active {
+            background-color: #0F172A;
+            color: #fff;
+            border-color: #0F172A;
+        }
+
+    #searchInput {
+        border: 1px solid var(--med-border);
+        border-radius: 8px;
+    }
+
+    /* ---------- Table ---------- */
     .card-med-table {
         border: 1px solid var(--med-border);
         border-radius: 12px;
@@ -54,6 +142,7 @@
             padding: 16px;
             border-bottom: 1px solid var(--med-border);
             background-color: #FFFFFF;
+            white-space: nowrap;
         }
 
         .table-med tbody td {
@@ -62,6 +151,14 @@
             border-bottom: 1px solid #F1F5F9;
             font-size: 0.9rem;
             vertical-align: middle;
+        }
+
+        .table-med tbody tr.row-hidden {
+            display: none;
+        }
+
+        .table-med tbody tr:hover {
+            background-color: #F8FAFC;
         }
 
     .badge-status {
@@ -111,82 +208,199 @@
         font-size: 0.825rem;
         font-weight: 600;
     }
+
+    .form-check-input:checked {
+        background-color: #0284C7;
+        border-color: #0284C7;
+    }
+
+    /* ---------- Floating selection bar ---------- */
+    #selectionBar {
+        position: sticky;
+        bottom: 16px;
+        z-index: 20;
+        display: none;
+        border-radius: 12px;
+        background: #0F172A;
+        color: #fff;
+        padding: 14px 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.25);
+        margin-top: 16px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+        #selectionBar .sel-text b {
+            color: #38BDF8;
+        }
+
+    /* ---------- Print ---------- */
+    #printArea {
+        display: none;
+    }
+
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        #printArea, #printArea * {
+            visibility: visible;
+        }
+
+        #printArea {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 24px;
+        }
+    }
 </style>
 
 <div class="container-fluid px-4 py-4">
 
     <!-- Header Section -->
-    <div class="mb-4">
-        <h2 class="page-title mb-1 d-flex align-items-center gap-2">
-            <span style="color: #F59E0B;">🔔</span>
-            <span>ระบบแจ้งเตือนสต็อกต่ำอัตโนมัติ (Automated ROP Alert)</span>
-        </h2>
-        <p class="page-subtitle mb-0">คำนวณเรียลไทม์จาก Safety Stock ของแพทย์/เภสัชกร ประวัติการตัดจ่าย และจำนวนคงเหลือจริง</p>
+    <div class="mb-4 d-flex flex-wrap justify-content-between align-items-end gap-2">
+        <div>
+            <h2 class="page-title mb-1 d-flex align-items-center gap-2">
+                
+                <span>ระบบแจ้งเตือนสต็อกต่ำอัตโนมัติ (Automated ROP Alert)</span>
+            </h2>
+            <p class="page-subtitle mb-0">คำนวณเรียลไทม์จาก Safety Stock ของแพทย์/เภสัชกร ประวัติการตัดจ่าย และจำนวนคงเหลือจริง</p>
+        </div>
+        <div class="text-end">
+            <small class="text-muted d-block">ข้อมูล ณ วันที่</small>
+            <span class="fw-semibold">@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</span> น.
+        </div>
+    </div>
+
+    <!-- Summary Stat Cards -->
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-4 col-lg">
+            <div class="stat-card active" data-filter="all">
+                <div class="stat-icon" style="background:#F1F5F9;color:#334155;"><i class="bi bi-clipboard-data"></i></div>
+                <div>
+                    <div class="stat-value" >@totalCount</div>
+                    <div class="stat-label">รายการทั้งหมด</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg">
+            <div class="stat-card" data-filter="critical">
+                <div class="stat-icon" style="background:var(--alert-danger-bg);color:var(--alert-danger-text);"><i class="bi bi-exclamation-octagon-fill"></i></div>
+                <div>
+                    <div class="stat-value" style="color:var(--alert-danger-text);">@criticalCount</div>
+                    <div class="stat-label">สต็อกวิกฤต</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg">
+            <div class="stat-card" data-filter="reorder">
+                <div class="stat-icon" style="background:var(--alert-info-bg);color:var(--alert-info-text);"><i class="bi bi-cart-plus-fill"></i></div>
+                <div>
+                    <div class="stat-value" style="color:var(--alert-info-text);">@reorderCount</div>
+                    <div class="stat-label">ต้องสั่งซื้อเพิ่ม</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg">
+            <div class="stat-card" data-filter="expiring">
+                <div class="stat-icon" style="background:var(--alert-warning-bg);color:var(--alert-warning-text);"><i class="bi bi-clock-history"></i></div>
+                <div>
+                    <div class="stat-value" style="color:var(--alert-warning-text);">@expiringCount</div>
+                    <div class="stat-label">ใกล้หมดอายุ</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg">
+            <div class="stat-card" data-filter="expired">
+                <div class="stat-icon" style="background:var(--alert-danger-bg);color:#EF4444;"><i class="bi bi-x-circle-fill"></i></div>
+                <div>
+                    <div class="stat-value" style="color:#EF4444;">@expiredCount</div>
+                    <div class="stat-label">หมดอายุแล้ว</div>
+                </div>
+            </div>
+        </div>
+       
     </div>
 
     <!-- Main Data Table Card -->
     <div class="card card-med-table">
         <div class="table-responsive">
-            <table class="table table-med align-middle">
+            <table class="table table-med align-middle" id="lowStockTable">
                 <thead>
                     <tr>
-                        <th class="text-center" style="width: 10%;">รหัสยา</th>
-                        <th style="width: 25%;">ชื่อเวชภัณฑ์/ยา</th>
-                        <th class="text-center" style="width: 13%;">สต็อกคงเหลือ</th>
-                        <th class="text-center" style="width: 12%;">Safety Stock</th>
-                        <th class="text-center" style="width: 12%;">จุด ROP</th>
-                        <th class="text-center" style="width: 13%;">แนะนำสั่งซื้อ (ROQ)</th>
-                        <th class="text-center" style="width: 15%;">สถานะการแจ้งเตือน</th>
+                        
+                        <th class="text-center" style="width: 9%;">รหัสยา</th>
+                        <th style="width: 21%;">ชื่อเวชภัณฑ์/ยา</th>
+                        <th class="text-center" style="width: 11%;">สต็อกคงเหลือ</th>
+                        <th class="text-center" style="width: 10%;">Safety Stock</th>
+                        <th class="text-center" style="width: 10%;">จุดที่ต้องสั่งซื้อเพิ่ม</th>
+                        <th class="text-center" style="width: 11%;">ปริมาณที่แนะนำให้สั่ง</th>
+                        <th class="text-center" style="width: 10%;">มูลค่าประมาณ</th>
+                        <th class="text-center" style="width: 14%;">สถานะการแจ้งเตือน</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model != null && Model.Any())
+                    @if (items.Any())
                     {
-                        foreach (var item in Model)
+                        foreach (var item in items)
                         {
                             var unit = item.Medicine.MedicineUnit?.Unit_name ?? "หน่วย";
+                            var price = item.Medicine.Price;
+                            var estCost = price * item.SuggestedROQ;
+                            var filters = new List<string>();
+                            if (item.IsCritical) filters.Add("critical");
+                            if (item.IsReorder && !item.IsCritical) filters.Add("reorder");
+                            if (item.IsExpired) filters.Add("expired");
+                            if (item.IsExpiringSoon && !item.IsExpired) filters.Add("expiring");
 
-                            <tr>
-                                <!-- Code -->
+                            <tr data-filters="@string.Join(",", filters)"
+                                data-name="@((item.Medicine.Medicine_name ?? "").ToLower())"
+                                data-code="@((item.Medicine.Medicine_id ?? "").ToLower())">
+                         
+
                                 <td class="text-center">
                                     <span class="code-badge">@item.Medicine.Medicine_id</span>
                                 </td>
 
-                                <!-- Medicine Name -->
                                 <td class="fw-bold text-dark">
-                                    <span class="text-primary me-1">💊</span>
+                                    
                                     @(item.Medicine.Medicine_name ?? "ไม่ระบุชื่อยา")
                                 </td>
 
-                                <!-- Current Stock -->
                                 <td class="text-center fw-bold fs-6">
                                     @item.CurrentStock @unit
                                 </td>
 
-                                <!-- Safety Stock -->
                                 <td class="text-center text-muted">
                                     @item.SafetyStock @unit
                                 </td>
 
-                                <!-- ROP -->
                                 <td class="text-center fw-semibold">
                                     @item.ReorderPoint @unit
                                 </td>
 
-                                <!-- Suggested ROQ -->
-                                <td class="text-center">
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fs-6 fw-bold">
+                                <td class="text-centerfw-semibold">
+                                    
                                         +@item.SuggestedROQ @unit
-                                    </span>
+                                    
                                 </td>
 
-                                <!-- Status Badges -->
+                                <td class="text-center text-muted">
+                                    @(price > 0 ? estCost.ToString("N0") + " บาท" : "-")
+                                </td>
+
                                 <td class="text-center">
                                     <div class="d-flex flex-column gap-1 align-items-center">
                                         @if (item.IsCritical)
                                         {
                                             <span class="badge-status badge-critical">
-                                                <i class="bi bi-exclamation-octagon-fill"></i> สต็อกวิกฤต 
+                                                <i class="bi bi-exclamation-octagon-fill"></i> สต็อกวิกฤต
                                             </span>
                                         }
                                         else if (item.IsReorder)
@@ -216,9 +430,9 @@
                     else
                     {
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
+                            <td colspan="9" class="text-center py-5 text-muted">
                                 <div class="d-flex flex-column align-items-center gap-2">
-                                    <span class="fs-1 text-success">✅</span>
+                                    <span class="fs-1 text-success"></span>
                                     <span class="fw-bold text-dark">สต็อกสินค้าอยู่ในระดับปกติทุกรายการ</span>
                                     <small class="text-muted">ไม่มีรายการยาที่ตกถึงจุดสั่งซื้อเพิ่ม (ROP)</small>
                                 </div>
@@ -229,4 +443,189 @@
             </table>
         </div>
     </div>
+
+    <!-- No results after filter/search -->
+    <div id="noResults" class="text-center text-muted py-4" style="display:none;">
+        <i class="bi bi-search fs-3 d-block mb-2"></i>
+        ไม่พบรายการที่ตรงกับเงื่อนไขการค้นหา
+    </div>
+
+    <!-- Floating selection action bar 
+    <div id="selectionBar">
+        <div class="sel-text">
+            เลือกแล้ว <b id="selCount">0</b> รายการ &nbsp;•&nbsp; มูลค่ารวมประมาณ <b id="selCost">0</b> บาท
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-light" onclick="clearSelection()">ยกเลิกเลือก</button>
+            <button type="button" class="btn btn-sm btn-info text-white" onclick="printSelection()">
+                <i class="bi bi-printer"></i> พิมพ์ใบขอสั่งซื้อ
+            </button>
+        </div>
+    </div>
+    </div>-->
+
+<!-- Print-only area 
+<div id="printArea">
+    <h4 class="mb-1">ใบขอสั่งซื้อเวชภัณฑ์/ยา</h4>
+    <p class="text-muted mb-3">วันที่พิมพ์: @DateTime.Now.ToString("dd/MM/yyyy HH:mm") น.</p>
+    <table class="table table-bordered" id="printTable">
+        <thead>
+            <tr>
+                <th>ชื่อเวชภัณฑ์/ยา</th>
+                <th>จำนวนที่ขอสั่งซื้อ</th>
+                <th>มูลค่าประมาณ (บาท)</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 </div>
+
+<script>
+    (function () {
+        var currentFilter = 'all';
+
+        function applyFilters() {
+            var search = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+            var rows = document.querySelectorAll('#lowStockTable tbody tr[data-filters]');
+            var visibleCount = 0;
+
+            rows.forEach(function (row) {
+                var rowFilters = (row.getAttribute('data-filters') || '').split(',');
+                var matchesFilter = currentFilter === 'all' || rowFilters.indexOf(currentFilter) !== -1;
+                var name = row.getAttribute('data-name') || '';
+                var code = row.getAttribute('data-code') || '';
+                var matchesSearch = !search || name.indexOf(search) !== -1 || code.indexOf(search) !== -1;
+
+                if (matchesFilter && matchesSearch) {
+                    row.classList.remove('row-hidden');
+                    visibleCount++;
+                } else {
+                    row.classList.add('row-hidden');
+                }
+            });
+
+            var noResults = document.getElementById('noResults');
+            var hasAnyRow = rows.length > 0;
+            noResults.style.display = (hasAnyRow && visibleCount === 0) ? 'block' : 'none';
+        }
+
+        // Filter pills
+        document.querySelectorAll('.filter-pill').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                currentFilter = btn.getAttribute('data-filter');
+                document.querySelectorAll('.filter-pill').forEach(function (b) { b.classList.remove('active'); });
+                document.querySelectorAll('.stat-card[data-filter]').forEach(function (c) { c.classList.remove('active'); });
+                btn.classList.add('active');
+                var card = document.querySelector('.stat-card[data-filter="' + currentFilter + '"]');
+                if (card) card.classList.add('active');
+                applyFilters();
+            });
+        });
+
+        // Stat cards act as filter shortcuts too
+        document.querySelectorAll('.stat-card[data-filter]').forEach(function (card) {
+            card.addEventListener('click', function () {
+                var f = card.getAttribute('data-filter');
+                var pill = document.querySelector('.filter-pill[data-filter="' + f + '"]');
+                if (pill) pill.click();
+            });
+        });
+
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+        // Selection handling
+        var selectAll = document.getElementById('selectAll');
+        var checkboxes = document.querySelectorAll('.row-check');
+
+        function updateSelectionBar() {
+            var selected = document.querySelectorAll('.row-check:checked');
+            var bar = document.getElementById('selectionBar');
+            var totalCost = 0;
+            selected.forEach(function (cb) { totalCost += parseFloat(cb.getAttribute('data-cost')) || 0; });
+
+            if (selected.length > 0) {
+                bar.style.display = 'flex';
+                document.getElementById('selCount').textContent = selected.length;
+                document.getElementById('selCost').textContent = totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 });
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        checkboxes.forEach(function (cb) {
+            cb.addEventListener('change', updateSelectionBar);
+        });
+
+        if (selectAll) {
+            selectAll.addEventListener('change', function () {
+                document.querySelectorAll('#lowStockTable tbody tr:not(.row-hidden) .row-check').forEach(function (cb) {
+                    cb.checked = selectAll.checked;
+                });
+                updateSelectionBar();
+            });
+        }
+
+        window.clearSelection = function () {
+            checkboxes.forEach(function (cb) { cb.checked = false; });
+            if (selectAll) selectAll.checked = false;
+            updateSelectionBar();
+        };
+
+        window.printSelection = function () {
+            var selected = document.querySelectorAll('.row-check:checked');
+            if (selected.length === 0) { return; }
+
+            var tbody = document.querySelector('#printTable tbody');
+            tbody.innerHTML = '';
+            var i = 1;
+            selected.forEach(function (cb) {
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                   
+                    '<td>' + cb.getAttribute('data-code') + '</td>' +
+                    '<td>' + cb.getAttribute('data-name') + '</td>' +
+                    '<td>' + cb.getAttribute('data-roq') + ' ' + cb.getAttribute('data-unit') + '</td>' +
+                    '<td>' + (parseFloat(cb.getAttribute('data-cost')) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 }) + '</td>';
+                tbody.appendChild(tr);
+            });
+
+            window.print();
+        };
+
+        window.exportCsv = function () {
+            var selected = document.querySelectorAll('.row-check:checked');
+            var source = selected.length > 0
+                ? selected
+                : document.querySelectorAll('#lowStockTable tbody tr:not(.row-hidden) .row-check');
+
+            if (source.length === 0) { return; }
+
+            var rows = [[, 'ชื่อเวชภัณฑ์/ยา', 'จำนวนสั่งซื้อ', 'หน่วย', 'มูลค่าประมาณ (บาท)']];
+            source.forEach(function (cb) {
+                rows.push([
+                    
+                    cb.getAttribute('data-name'),
+                    cb.getAttribute('data-roq'),
+                    cb.getAttribute('data-unit'),
+                    cb.getAttribute('data-cost')
+                ]);
+            });
+
+            var csvContent = rows.map(function (r) {
+                return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+            }).join('\r\n');
+
+            var blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'purchase-order-list-' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        applyFilters();
+        })();-->
+</script>

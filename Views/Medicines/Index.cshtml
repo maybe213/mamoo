@@ -128,6 +128,14 @@
             color: #ffffff;
             border-color: #EF4444;
         }
+
+    .bulk-toolbar {
+        background: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        border-radius: 10px;
+        padding: 10px 18px;
+        transition: all 0.3s ease;
+    }
 </style>
 
 <div class="dashboard-wrapper mt-4 px-3 px-md-4">
@@ -139,12 +147,12 @@
     <ul class="nav nav-pills mb-3 gap-2" id="pills-tab" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active fw-bold rounded-pill px-3" id="pills-medicine-tab" data-bs-toggle="pill" data-bs-target="#pills-medicine" type="button" role="tab">
-                💊 รายการยา (@medicines.Count)
+              รายการยา (@medicines.Count)
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link fw-bold rounded-pill px-3" id="pills-supply-tab" data-bs-toggle="pill" data-bs-target="#pills-supply" type="button" role="tab">
-                🩹 รายการเวชภัณฑ์ (@supplies.Count)
+               รายการเวชภัณฑ์ (@supplies.Count)
             </button>
         </li>
     </ul>
@@ -213,134 +221,304 @@
             </div>
         </form>
 
-        <!-- Tab Contents -->
-        <div class="tab-content" id="pills-tabContent">
-            <!-- 1. ตารางรายการยา -->
-            <div class="tab-pane fade show active" id="pills-medicine" role="tabpanel">
-                <div class="table-responsive">
-                    <table class="dash-table">
-                        <thead>
-                            <tr>
-                                <th>รหัสยา</th>
-                                <th>ชื่อยา</th>
-                                <th class="text-center">สต็อก</th>
-                                <th>ล็อต</th>
-                                <th>วันหมดอายุ</th>
-                                <th>ราคาทุน</th>
-                                <th class="text-center">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (!medicines.Any())
-                            {
+        <!-- 🔔 แถบการจัดการเมื่อมีการเลือกหลายรายการ -->
+        <div id="bulkActionBar" class="bulk-toolbar mb-3 d-none align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2 text-primary fw-semibold">
+                <i class="bi bi-check2-square fs-5"></i>
+                <span>เลือกอยู่ <span id="selectedCount" class="badge bg-primary rounded-pill fs-6">0</span> รายการ</span>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm rounded-2 d-flex align-items-center gap-1 shadow-sm" onclick="openBulkDeleteModal()">
+                <i class="bi bi-trash3-fill"></i> ลบ / ปิดใช้งาน รายการที่เลือก
+            </button>
+        </div>
+
+        <!-- Form หุ้มตารางเพื่อส่ง Selected IDs ไปให้ Controller -->
+        <form id="bulkDeleteForm" asp-action="BulkDelete" method="post">
+            @Html.AntiForgeryToken()
+
+            <!-- Tab Contents -->
+            <div class="tab-content" id="pills-tabContent">
+                <!-- 1. ตารางรายการยา -->
+                <div class="tab-pane fade show active" id="pills-medicine" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="dash-table">
+                            <thead>
                                 <tr>
-                                    <td colspan="7" class="text-center py-5 text-muted">
-                                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary opacity-50"></i>
-                                        ไม่พบรายการยาในระบบคลัง
-                                    </td>
+                                    <th class="text-center" style="width: 40px;">
+                                        <input type="checkbox" class="form-check-input" id="selectAllMed" onchange="toggleSelectAll('med', this.checked)" />
+                                    </th>
+                                    <th>รหัสยา</th>
+                                    <th>ชื่อยา</th>
+                                    <th class="text-center">สต็อก</th>
+                                    <th>ล็อต</th>
+                                    <th>วันหมดอายุ</th>
+                                    <th>ราคาทุน</th>
+                                    <th class="text-center">จัดการ</th>
                                 </tr>
-                            }
-                            else
-                            {
-                                @foreach (var item in medicines)
+                            </thead>
+                            <tbody>
+                                @if (!medicines.Any())
                                 {
                                     <tr>
-                                        <td><code>@item.Medicine_id</code></td>
-                                        <td class="fw-bold text-dark">@item.Medicine_name</td>
-                                        <td class="text-center">
-                                            @if ((item.Stock ?? 0) < 10)
-                                            {
-                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1.5 rounded-pill fw-bold">@item.Stock</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-pill fw-medium">@item.Stock</span>
-                                            }
-                                        </td>
-                                        <td><span class="text-primary fw-semibold">@item.Lot</span></td>
-                                        <td>@(item.Expired_at.HasValue? item.Expired_at.Value.ToString("dd/MM/yyyy") : "-")</td>
-                                        <td class="fw-medium">@item.Price.ToString("N2") ฿</td>
-                                        <td class="text-center">
-                                            <div class="d-inline-flex gap-1">
-                                                <a asp-action="Edit" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-edit rounded-2" title="แก้ไข">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </a>
-                                                <a asp-action="Delete" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-del rounded-2" title="ลบข้อมูล">
-                                                    <i class="bi bi-trash"></i>
-                                                </a>
-                                            </div>
+                                        <td colspan="8" class="text-center py-5 text-muted">
+                                            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                                            ไม่พบรายการยาในระบบคลัง
                                         </td>
                                     </tr>
                                 }
-                            }
+                                else
+                                {
+                                    @foreach (var item in medicines)
+                                    {
+                                        <tr>
+                                            <td class="text-center">
+                                                <input type="checkbox" name="ids" value="@item.Medicine_id"
+                                                       class="form-check-input row-checkbox item-med"
+                                                       data-id="@item.Medicine_id"
+                                                       data-name="@item.Medicine_name"
+                                                       data-stock="@(item.Stock ?? 0)"
+                                                       onchange="updateBulkBar()" />
+                                            </td>
+                                            <td><code>@item.Medicine_id</code></td>
+                                            <td class="fw-bold text-dark">@item.Medicine_name</td>
+                                            <td class="text-center">
+                                                @if ((item.Stock ?? 0) < 10)
+                                                {
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1.5 rounded-pill fw-bold">@item.Stock</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-pill fw-medium">@item.Stock</span>
+                                                }
+                                            </td>
+                                            <td><span class="text-primary fw-semibold">@item.Lot</span></td>
+                                            <td>@(item.Expired_at.HasValue? item.Expired_at.Value.ToString("dd/MM/yyyy") : "-")</td>
+                                            <td class="fw-medium">@item.Price.ToString("N2") ฿</td>
+                                            <td class="text-center">
+                                                <div class="d-inline-flex gap-1">
+                                                    <a asp-action="Edit" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-edit rounded-2" title="แก้ไข">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </a>
+                                                    <a asp-action="Delete" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-del rounded-2" title="ลบข้อมูล">
+                                                        <i class="bi bi-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. ตารางรายการเวชภัณฑ์ -->
+                <div class="tab-pane fade" id="pills-supply" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width: 40px;">
+                                        <input type="checkbox" class="form-check-input" id="selectAllSupply" onchange="toggleSelectAll('supply', this.checked)" />
+                                    </th>
+                                    <th>รหัสเวชภัณฑ์</th>
+                                    <th>ชื่อเวชภัณฑ์</th>
+                                    <th class="text-center">สต็อก</th>
+                                    <th>ล็อต</th>
+                                    <th>วันหมดอายุ</th>
+                                    <th>ราคาทุน</th>
+                                    <th class="text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!supplies.Any())
+                                {
+                                    <tr>
+                                        <td colspan="8" class="text-center py-5 text-muted">
+                                            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                                            ไม่พบรายการเวชภัณฑ์ในระบบคลัง
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var item in supplies)
+                                    {
+                                        <tr>
+                                            <td class="text-center">
+                                                <input type="checkbox" name="ids" value="@item.Medicine_id"
+                                                       class="form-check-input row-checkbox item-supply"
+                                                       data-id="@item.Medicine_id"
+                                                       data-name="@item.Medicine_name"
+                                                       data-stock="@(item.Stock ?? 0)"
+                                                       onchange="updateBulkBar()" />
+                                            </td>
+                                            <td><code>@item.Medicine_id</code></td>
+                                            <td class="fw-bold text-dark">@item.Medicine_name</td>
+                                            <td class="text-center">
+                                                @if ((item.Stock ?? 0) < 10)
+                                                {
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1.5 rounded-pill fw-bold">@item.Stock</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-pill fw-medium">@item.Stock</span>
+                                                }
+                                            </td>
+                                            <td><span class="text-primary fw-semibold">@item.Lot</span></td>
+                                            <td>@(item.Expired_at.HasValue? item.Expired_at.Value.ToString("dd/MM/yyyy") : "-")</td>
+                                            <td class="fw-medium">@item.Price.ToString("N2") ฿</td>
+                                            <td class="text-center">
+                                                <div class="d-inline-flex gap-1">
+                                                    <a asp-action="Edit" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-edit rounded-2" title="แก้ไข">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </a>
+                                                    <a asp-action="Delete" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-del rounded-2" title="ลบข้อมูล">
+                                                        <i class="bi bi-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 🔴 Modal ยืนยันการลบ/ปิดใช้งานแบบหลายรายการ -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-danger text-white border-0 py-3">
+                <h5 class="modal-title fw-bold id="bulkDeleteModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>ยืนยันการดำเนินการหลายรายการ
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-warning border-warning border-start border-4 rounded-3 mb-3">
+                    <div class="d-flex gap-2">
+                        <i class="bi bi-info-circle-fill text-warning fs-5"></i>
+                        <div class="small">
+                            <strong>หมายเหตุเงื่อนไขระบบ:</strong>
+                            <ul class="mb-0 ps-3 mt-1">
+                                <li>รายการที่มี <strong>คงเหลือในสต็อก > 0</strong> หรือเคยมีประวัติจ่ายยา จะถูก <strong>ระงับ/ปิดใช้งาน</strong> แทนการลบ</li>
+                                <li>รายการที่ไม่มีสต็อกและไม่มีประวัติจะถูก <strong>ลบถาวร</strong> จากฐานข้อมูล</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="fw-bold mb-2 text-dark">รายการที่เลือกทั้งหมด (<span id="modalSelectedCount">0</span> รายการ):</p>
+
+                <div class="table-responsive border rounded-3 style-scroll" style="max-height: 250px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>รหัส</th>
+                                <th>ชื่อรายการ</th>
+                                <th class="text-center">จำนวนคงเหลือ</th>
+                                <th class="text-center">รูปแบบการดำเนินการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalItemsList">
+                            <!-- รายการจะถูกสร้างผ่าน JS -->
                         </tbody>
                     </table>
                 </div>
             </div>
-
-            <!-- 2. ตารางรายการเวชภัณฑ์ -->
-            <div class="tab-pane fade" id="pills-supply" role="tabpanel">
-                <div class="table-responsive">
-                    <table class="dash-table">
-                        <thead>
-                            <tr>
-                                <th>รหัสเวชภัณฑ์</th>
-                                <th>ชื่อเวชภัณฑ์</th>
-                                <th class="text-center">สต็อก</th>
-                                <th>ล็อต</th>
-                                <th>วันหมดอายุ</th>
-                                <th>ราคาทุน</th>
-                                <th class="text-center">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (!supplies.Any())
-                            {
-                                <tr>
-                                    <td colspan="7" class="text-center py-5 text-muted">
-                                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary opacity-50"></i>
-                                        ไม่พบรายการเวชภัณฑ์ในระบบคลัง
-                                    </td>
-                                </tr>
-                            }
-                            else
-                            {
-                                @foreach (var item in supplies)
-                                {
-                                    <tr>
-                                        <td><code>@item.Medicine_id</code></td>
-                                        <td class="fw-bold text-dark">@item.Medicine_name</td>
-                                        <td class="text-center">
-                                            @if ((item.Stock ?? 0) < 10)
-                                            {
-                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1.5 rounded-pill fw-bold">@item.Stock</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-pill fw-medium">@item.Stock</span>
-                                            }
-                                        </td>
-                                        <td><span class="text-primary fw-semibold">@item.Lot</span></td>
-                                        <td>@(item.Expired_at.HasValue? item.Expired_at.Value.ToString("dd/MM/yyyy") : "-")</td>
-                                        <td class="fw-medium">@item.Price.ToString("N2") ฿</td>
-                                        <td class="text-center">
-                                            <div class="d-inline-flex gap-1">
-                                                <a asp-action="Edit" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-edit rounded-2" title="แก้ไข">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </a>
-                                                <a asp-action="Delete" asp-route-id="@item.Medicine_id" class="btn btn-sm btn-theme-del rounded-2" title="ลบข้อมูล">
-                                                    <i class="bi bi-trash"></i>
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                        </tbody>
-                    </table>
-                </div>
+            <div class="modal-footer bg-light border-0 py-3">
+                <button type="button" class="btn btn-outline-secondary rounded-2 px-4" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-danger rounded-2 px-4 fw-semibold" onclick="submitBulkDelete()">
+                    <i class="bi bi-check-circle-fill me-1"></i> ยืนยันการจัดการข้อมูล
+                </button>
             </div>
-
         </div>
     </div>
 </div>
+
+<script>
+    // เลือก/ยกเลิกทั้งหมดตาม Tab
+    function toggleSelectAll(type, isChecked) {
+        const selector = type === 'med' ? '.item-med' : '.item-supply';
+        document.querySelectorAll(selector).forEach(cb => {
+            cb.checked = isChecked;
+        });
+        updateBulkBar();
+    }
+
+    // อัปเดตการแสดงผลของ Toolbar เมื่อกด Checkbox
+    function updateBulkBar() {
+        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        const count = checkedBoxes.length;
+        const bar = document.getElementById('bulkActionBar');
+
+        document.getElementById('selectedCount').textContent = count;
+
+        if (count > 0) {
+            bar.classList.remove('d-none');
+            bar.classList.add('d-flex');
+        } else {
+            bar.classList.add('d-none');
+            bar.classList.remove('d-flex');
+        }
+
+        // อัปเดตสถานะ Select All ของแต่ละ Tab
+        const allMed = document.querySelectorAll('.item-med');
+        const checkedMed = document.querySelectorAll('.item-med:checked');
+        if (allMed.length > 0) {
+            document.getElementById('selectAllMed').checked = (allMed.length === checkedMed.length);
+        }
+
+        const allSupply = document.querySelectorAll('.item-supply');
+        const checkedSupply = document.querySelectorAll('.item-supply:checked');
+        if (allSupply.length > 0) {
+            document.getElementById('selectAllSupply').checked = (allSupply.length === checkedSupply.length);
+        }
+    }
+
+    // เปิด Modal ยืนยันพร้อมโหลดรายการสินค้าที่เลือก
+    function openBulkDeleteModal() {
+        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        const listBody = document.getElementById('modalItemsList');
+
+        if (checkedBoxes.length === 0) return;
+
+        listBody.innerHTML = '';
+        document.getElementById('modalSelectedCount').textContent = checkedBoxes.length;
+
+        checkedBoxes.forEach(cb => {
+            const id = cb.dataset.id;
+            const name = cb.dataset.name;
+            const stock = parseInt(cb.dataset.stock) || 0;
+
+            const isSoftDelete = stock > 0; // ถ้ายามีสต็อก จะเข้าเงื่อนไขปิดใช้งาน
+            const actionBadge = isSoftDelete
+                ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1"><i class="bi bi-eye-slash-fill me-1"></i> ปิดใช้งาน</span>'
+                : '<span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1"><i class="bi bi-trash-fill me-1"></i> ลบถาวร</span>';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><code>${id}</code></td>
+                <td class="fw-bold text-dark">${name}</td>
+                <td class="text-center">${stock.toLocaleString()}</td>
+                <td class="text-center">${actionBadge}</td>
+            `;
+            listBody.appendChild(tr);
+        });
+
+        const modal = new bootstrap.Modal(document.getElementById('bulkDeleteModal'));
+        modal.show();
+    }
+
+    // Submit Form หลัก
+    function submitBulkDelete() {
+        document.getElementById('bulkDeleteForm').submit();
+    }
+</script>

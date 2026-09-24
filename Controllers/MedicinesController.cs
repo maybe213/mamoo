@@ -151,7 +151,16 @@ namespace DrugInventoryPro.Controllers
                     g => g.Select(u => u.Unit_id.ToString()).Distinct().ToList()
                 );
         }
+        public async Task<IActionResult> DisabledList()
+        {
+            var disabledMedicines = await _context.Medicines
+                .Include(m => m.Category)
+                .Include(m => m.MedicineUnit)
+                .Where(m => m.Status == "Inactive")
+                .ToListAsync();
 
+            return View(disabledMedicines);
+        }
         /// <summary>
         /// ฟังก์ชันกลางสำหรับคำนวณและดึงรายการยาที่สต็อกต่ำกว่าเกณฑ์ ROP (ใช้มาตรฐานเดียวกันทั้ง Controller)
         /// </summary>
@@ -181,7 +190,7 @@ namespace DrugInventoryPro.Controllers
                 .AsNoTracking()
                 .Include(m => m.Category)
                 .Include(m => m.MedicineUnit)
-                .Where(m => m.Status != "Inactive")
+                .Where(m => m.Status == "Active")
                 .ToListAsync();
 
             var alertList = new List<LowStockViewModel>();
@@ -266,7 +275,7 @@ namespace DrugInventoryPro.Controllers
                 .AsNoTracking()
                 .Include(m => m.Category)
                 .Include(m => m.MedicineUnit)
-                .Where(m => m.Status != "Inactive")
+                .Where(m => m.Status == "Active")
                 .ToListAsync();
 
             PopulateCatalogViewBag(allItems, sortBy);
@@ -284,7 +293,7 @@ namespace DrugInventoryPro.Controllers
                 .AsNoTracking()
                 .Include(m => m.Category)
                 .Include(m => m.MedicineUnit)
-                .Where(m => m.Status != "Inactive" && m.Expired_at.HasValue && m.Expired_at.Value.Date <= today)
+                .Where(m => m.Status == "Active" && m.Expired_at.HasValue && m.Expired_at.Value.Date <= today)
                 .ToListAsync();
 
             PopulateCatalogViewBag(expiredItems);
@@ -300,7 +309,7 @@ namespace DrugInventoryPro.Controllers
                 .AsNoTracking()
                 .Include(m => m.Category)
                 .Include(m => m.MedicineUnit)
-                .Where(m => m.Status != "Inactive")
+                .Where(m => m.Status == "Active")
                 .ToListAsync();
 
             PopulateCatalogViewBag(allItems);
@@ -319,7 +328,7 @@ namespace DrugInventoryPro.Controllers
                 .AsNoTracking()
                 .Include(m => m.Category)
                 .Include(m => m.MedicineUnit)
-                .Where(m => m.Status != "Inactive" &&
+                .Where(m => m.Status == "Active" &&
                             m.Expired_at.HasValue &&
                             m.Expired_at.Value.Date > today &&
                             m.Expired_at.Value.Date <= next30Days)
@@ -354,7 +363,7 @@ namespace DrugInventoryPro.Controllers
             return View(alertList);
         }
 
-       
+
         // INDEX
         [HttpGet]
         public async Task<IActionResult> Index(string search, string sortBy)
@@ -378,7 +387,7 @@ namespace DrugInventoryPro.Controllers
                 .AsNoTracking()
                 .Include(m => m.Category)
                 .Include(m => m.MedicineUnit)
-                .Where(m => m.Status != "Inactive")
+                .Where(m => m.Status == "Active")
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(search))
@@ -400,7 +409,7 @@ namespace DrugInventoryPro.Controllers
         // CREATE POST
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Medicine_id,Medicine_name,Category_id,Unit_id,Price,Quantity,Stock,Lot,Expired_at,Packing_Size,Account_Type,Status,SafetyStock")] Medicines medicine, string? duplicateAction)
+        public async Task<IActionResult> Create([Bind("Medicine_id,Medicine_name,Category_id,Unit_id,Price,Quantity,Stock,Lot,Expired_at,Packing_Size,Account_Type,Status,SafetyStock")] Medicines medicine)
         {
             medicine.Medicine_name = medicine.Medicine_name?.Trim();
             medicine.Lot = medicine.Lot?.Trim();
@@ -423,72 +432,86 @@ namespace DrugInventoryPro.Controllers
                 var strategy = _context.Database.CreateExecutionStrategy();
                 return await strategy.ExecuteAsync<IActionResult>(async () =>
                 {
+                    _context.ChangeTracker.Clear();
                     using var transaction = await _context.Database.BeginTransactionAsync();
                     try
                     {
-                        var existingMedicine = await _context.Medicines
-                            .FirstOrDefaultAsync(m => m.Medicine_name == medicine.Medicine_name &&
-                                                      m.Category_id == medicine.Category_id &&
-                                                      m.Account_Type == medicine.Account_Type &&
-                                                      m.Lot == medicine.Lot &&
-                                                      m.Status == "Active");
+                        // 💡 ดึงยาที่ "ชื่อเดียวกัน" มาทั้งหมดก่อน (อาจมีหลายล็อต/หลายวันหมดอายุ)
+                        string nameKey = medicine.Medicine_name?.Trim().ToLower() ?? "";
+                        string lotKey = medicine.Lot?.Trim() ?? "";
 
-                        if (existingMedicine != null)
+                        var sameNameMedicines = await _context.Medicines
+                            .AsNoTracking()
+                            .Where(m => m.Medicine_name != null &&
+                                        m.Medicine_name.Trim().ToLower() == nameKey)
+                            .ToListAsync();
+
+                        // 1) ล็อตเดียวกันเป๊ะ (ชื่อ + Lot + วันหมดอายุ ตรงกันทั้งหมด) -> บวกจำนวนเข้าไปเลย
+                        var exactBatchMatch = sameNameMedicines.FirstOrDefault(m =>
+                            (m.Lot?.Trim() ?? "") == lotKey &&
+                            m.Expired_at == medicine.Expired_at);
+
+                        // 2) ไม่เจอล็อตเดียวกันเป๊ะ แต่มีรายการที่สต็อกหมดแล้ว (Stock <= 0) ให้ใช้แถวนั้นแทนของใหม่
+                        var emptyStockMatch = sameNameMedicines.FirstOrDefault(m => (m.Stock ?? 0) <= 0);
+
+                        var targetToUpdate = exactBatchMatch ?? emptyStockMatch;
+
+                        if (targetToUpdate != null)
                         {
-                            if (duplicateAction == "UpdateStock")
-                            {
-                                existingMedicine.Stock += medicine.Quantity;
-                                _context.Medicines.Update(existingMedicine);
-                                await _context.SaveChangesAsync();
-                                await transaction.CommitAsync();
+                            // พบรายการที่ควรอัปเดต (ล็อตเดิม หรือ แถวที่สต็อกหมดแล้ว) -> บวกจำนวนสต็อกเพิ่ม และอัปเดตข้อมูลล่าสุด
+                            int newQty = medicine.Stock ?? medicine.Quantity ?? 0;
+                            targetToUpdate.Stock = (targetToUpdate.Stock ?? 0) + newQty;
+                            targetToUpdate.Quantity = (targetToUpdate.Quantity ?? 0) + newQty;
 
-                                TempData["SuccessMessage"] = $"บวกเพิ่มสต็อกเดิมให้เรียบร้อยแล้ว (สต็อกใหม่: {existingMedicine.Stock})";
-                                return RedirectToAction(nameof(Index));
-                            }
-                            else if (duplicateAction == "ReplaceOld")
-                            {
-                                existingMedicine.Status = "Inactive";
-                                _context.Medicines.Update(existingMedicine);
+                            if (medicine.Price > 0) targetToUpdate.Price = medicine.Price;
+                            if (medicine.Expired_at.HasValue) targetToUpdate.Expired_at = medicine.Expired_at;
+                            if (!string.IsNullOrEmpty(medicine.Lot)) targetToUpdate.Lot = medicine.Lot;
 
-                                string prefix = await ResolvePrefixAsync(medicine.Category_id, medicine.Account_Type);
-                                medicine.Medicine_id = await GetNextMedicineIdAsync(prefix);
-                                medicine.Status = "Active";
+                            targetToUpdate.Status = "Active";
 
-                                _context.Medicines.Add(medicine);
-                                await _context.SaveChangesAsync();
-                                await transaction.CommitAsync();
+                            _context.Medicines.Attach(targetToUpdate);
+                            _context.Entry(targetToUpdate).State = EntityState.Modified;
+                            await _context.SaveChangesAsync();
+                            await transaction.CommitAsync();
 
-                                TempData["SuccessMessage"] = "ปิดใช้งานรายการเก่า และสร้างล็อตใหม่ทดแทนเรียบร้อย";
-                                return RedirectToAction(nameof(Index));
-                            }
-                            else
-                            {
-                                await transaction.RollbackAsync();
-
-                                ViewBag.DuplicateFound = true;
-                                ViewBag.DuplicateMessage = $"พบข้อมูลยา '{medicine.Medicine_name}' ล็อตหมายเลข '{medicine.Lot}' นี้ในระบบแล้ว";
-
-                                string prefix = await ResolvePrefixAsync(medicine.Category_id, medicine.Account_Type);
-                                await PrepareViewDataAsync(prefix);
-
-                                return View(medicine);
-                            }
+                            TempData["SuccessMessage"] = exactBatchMatch != null
+                                ? $"พบรายการ '{targetToUpdate.Medicine_name}' ล็อตเดิม (Lot: {targetToUpdate.Lot}) ในระบบแล้ว! บวกเพิ่มจำนวน {newQty} รายการเรียบร้อย (ยอดคงเหลือรวม: {targetToUpdate.Stock})"
+                                : $"สต็อกเดิมของ '{targetToUpdate.Medicine_name}' หมดแล้ว จึงอัปเดตเป็นล็อตใหม่ (Lot: {targetToUpdate.Lot}) เรียบร้อย (ยอดคงเหลือ: {targetToUpdate.Stock})";
+                            return RedirectToAction(nameof(Index));
                         }
 
+                        // 3) ชื่อนี้ยังไม่มีในระบบ หรือ มีแล้วแต่คนละล็อต+ของเก่ายังไม่หมด -> สร้างรายการใหม่แยกต่างหาก
                         string newPrefix = await ResolvePrefixAsync(medicine.Category_id, medicine.Account_Type);
                         medicine.Medicine_id = await GetNextMedicineIdAsync(newPrefix);
                         medicine.Status = "Active";
+
+                        // ✅ ล้าง entity ที่อาจถูก track ค้างมาจาก
+                        // ResolvePrefixAsync / GetNextMedicineIdAsync ก่อน Add ตัวใหม่
+                        _context.ChangeTracker.Clear();
 
                         _context.Medicines.Add(medicine);
                         await _context.SaveChangesAsync();
                         await transaction.CommitAsync();
 
-                        TempData["SuccessMessage"] = "เพิ่มรายการยาใหม่เรียบร้อยแล้ว";
+                        TempData["SuccessMessage"] = sameNameMedicines.Any()
+                            ? $"พบยา '{medicine.Medicine_name}' อยู่แล้วแต่คนละล็อต (ของเก่ายังมีสต็อก) จึงเพิ่มเป็นรายการล็อตใหม่ (รหัส: {medicine.Medicine_id}) เรียบร้อยแล้ว"
+                            : "เพิ่มรายการยาใหม่เรียบร้อยแล้ว";
                         return RedirectToAction(nameof(Index));
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
                         await transaction.RollbackAsync();
+                        // 🔍 DEBUG ชั่วคราว - เขียนลงโฟลเดอร์ของแอปเอง (มีอยู่แน่นอน ไม่ต้องพึ่ง C:\temp)
+                        try
+                        {
+                            string logPath = System.IO.Path.Combine(AppContext.BaseDirectory, "ef_error.log");
+                            System.IO.File.AppendAllText(logPath,
+                                $"[{DateTime.Now}]\n{ex}\n\n=== Tracked Medicines entities ก่อน throw ===\n" +
+                                string.Join("\n", _context.ChangeTracker.Entries<Medicines>()
+                                    .Select(e => $"Medicine_id={e.Entity.Medicine_id}, State={e.State}")) +
+                                "\n\n");
+                        }
+                        catch { /* ถ้าเขียน log ไม่ได้ก็ปล่อยผ่าน ไม่ให้บัง exception เดิม */ }
                         throw;
                     }
                 });
@@ -498,7 +521,6 @@ namespace DrugInventoryPro.Controllers
             await PrepareViewDataAsync(defaultPrefix);
             return View(medicine);
         }
-
         // EDIT GET
         [HttpGet]
         public async Task<IActionResult> Edit(string id)
@@ -512,7 +534,54 @@ namespace DrugInventoryPro.Controllers
             await PrepareViewDataAsync(prefix);
             return View(medicine);
         }
+        //Action BulkDelete เพื่อรับค่า List ของ ids แล้วดำเนินการลบ/ระงับ
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkDelete(List<string> ids)
+        {
+            if (ids == null || !ids.Any())
+            {
+                TempData["ErrorMessage"] = "กรุณาเลือกรายการที่ต้องการดำเนินการอย่างน้อย 1 รายการ";
+                return RedirectToAction(nameof(Index));
+            }
 
+            int deletedCount = 0;
+            int disabledCount = 0;
+
+            foreach (var id in ids)
+            {
+                var medicine = await _context.Medicines.FindAsync(id);
+                if (medicine != null)
+                {
+                    // 1. ตรวจสอบประวัติจ่ายยา
+                    bool hasDispenseHistory = await _context.DispenseDetails.AnyAsync(d => d.Medicine_id == id);
+
+                    // 2. ตรวจสอบประวัติรับเข้ายา (เพิ่มส่วนนี้เพื่อแก้ FK Constraint Error)
+                    bool hasReceiveHistory = await _context.ReceiveDetails.AnyAsync(r => r.Medicine_id == id);
+
+                    // หากมียาค้างสต็อก หรือมีประวัติจ่าย/รับเข้า ให้เปลี่ยนเป็นปิดใช้งาน (Soft Delete)
+                    bool isSoftDelete = ((medicine.Stock ?? 0) > 0 || hasDispenseHistory || hasReceiveHistory);
+
+                    if (isSoftDelete)
+                    {
+                        medicine.Status = "Disabled";
+                        _context.Update(medicine);
+                        disabledCount++;
+                    }
+                    else
+                    {
+                        // ลบถาวรได้เฉพาะรายการที่ไม่มีประวัติอ้างอิงใดๆ ในระบบเท่านั้น
+                        _context.Medicines.Remove(medicine);
+                        deletedCount++;
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"ดำเนินการสำเร็จ: ปิดใช้งาน {disabledCount} รายการ และลบถาวร {deletedCount} รายการ";
+            return RedirectToAction(nameof(Index));
+        }
         // EDIT POST
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -584,7 +653,25 @@ namespace DrugInventoryPro.Controllers
             await PrepareViewDataAsync(prefix);
             return View(medicine);
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Restore(string id)
+        {
+            var medicine = await _context.Medicines.FindAsync(id);
+            if (medicine == null)
+            {
+                TempData["ErrorMessage"] = "ไม่พบข้อมูลรายการยาที่ต้องการกู้คืน";
+                return RedirectToAction(nameof(DisabledList));
+            }
 
+            // เปลี่ยนสถานะกลับมาใช้งานตามปกติ
+            medicine.Status = "Active";
+            _context.Update(medicine);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"กู้คืนรายการ '{medicine.Medicine_name}' กลับเข้าสู่คลังยาเรียบร้อยแล้ว";
+            return RedirectToAction(nameof(DisabledList));
+        }
         // DETAILS
         [HttpGet]
         public async Task<IActionResult> Details(string id)

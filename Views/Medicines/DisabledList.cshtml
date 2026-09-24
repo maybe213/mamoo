@@ -1,0 +1,100 @@
+﻿@model IEnumerable<DrugInventoryPro.Models.Medicines>
+
+@{
+    ViewData["Title"] = "รายการที่ถูกปิดใช้งาน";
+}
+
+<div class="container-fluid py-4">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-dark mb-1">
+                <i class="bi bi-archive-fill text-secondary me-2"></i>รายการที่ถูกปิดใช้งาน
+            </h4>
+            <span class="text-muted small">แสดงประวัติรายการยาที่ถูกซ่อนไว้ สามารถกดกู้คืนกลับเข้าสู่คลังยาได้</span>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-primary rounded-pill px-3 shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i> กลับหน้าคลังยาหลัก
+        </a>
+    </div>
+
+    <!-- Alert Notifications -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success border-0 shadow-sm rounded-3 mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-check-circle-fill"></i>
+            <div>@TempData["SuccessMessage"]</div>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div>@TempData["ErrorMessage"]</div>
+        </div>
+    }
+
+    <!-- Data Table -->
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light text-secondary">
+                        <tr>
+                            <th class="ps-3 py-3">รหัสยา</th>
+                            <th>ชื่อยา</th>
+                            <th>หมวดหมู่</th>
+                            <th>หน่วยนับ</th>
+                            <th>ราคา</th>
+                            <th>สถานะ</th>
+                            <th class="text-end pe-3">การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                    ไม่มีรายการยาที่ถูกปิดใช้งานในขณะนี้
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td class="ps-3 fw-bold font-monospace text-secondary">@item.Medicine_id</td>
+                                    <td>
+                                        <div class="fw-bold text-dark">@item.Medicine_name</div>
+                                        <small class="text-muted">Lot: @(item.Lot ?? "-")</small>
+                                    </td>
+                                    <td>@(item.Category?.Category_name ?? "-")</td>
+                                    <td>@(item.MedicineUnit?.Unit_name ?? "-")</td>
+                                    <td>@item.Price.ToString("N2") ฿</td>
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill">
+                                            @item.Status
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <form asp-action="Restore" asp-route-id="@item.Medicine_id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-outline-success rounded-pill px-3"
+                                                    onclick="return confirm('คุณต้องการกู้คืนรายการ @item.Medicine_name กลับเข้าคลังยาใช่หรือไม่?')">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i> กู้คืน
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

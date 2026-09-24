@@ -7,10 +7,182 @@
     var importType = ViewBag.ImportType as string ?? "MED";
     var rawDocumentTitle = ViewBag.DocumentTitle as string ?? "";
     var documentTitle = rawDocumentTitle?.TrimEnd(',', ' ');
-    var duplicateCount = Model.Count(m => m.IsDuplicateOrSimilar);
 }
 
-<div class="container-fluid py-4">
+<style>
+    :root {
+        --primary-color: #2563EB;
+        --primary-hover: #1D4ED8;
+        --primary-light: #EFF6FF;
+        --primary-border: #BFDBFE;
+        --bg-main: #F8FAFC;
+        --card-bg: #FFFFFF;
+        --text-dark: #0F172A;
+        --text-muted: #64748B;
+        --border-color: #E2E8F0;
+    }
+
+    .preview-wrapper {
+        max-width: 1700px;
+        margin: 0 auto;
+        transition: max-width 0.25s ease;
+    }
+
+        .preview-wrapper.wide-mode {
+            max-width: 100% !important;
+        }
+
+    body.preview-wide-mode .sidebar,
+    body.preview-wide-mode #sidebar,
+    body.preview-wide-mode .main-sidebar,
+    body.preview-wide-mode .sidenav {
+        width: 0 !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+    }
+
+    body.preview-wide-mode .content-wrapper,
+    body.preview-wide-mode .main-content,
+    body.preview-wide-mode #content {
+        margin-left: 0 !important;
+    }
+
+    .section-header {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--primary-color);
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 6px;
+        margin-bottom: 14px;
+        margin-top: 4px;
+    }
+
+    .preview-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 380px;
+        gap: 20px;
+        align-items: start;
+    }
+
+    @@media (max-width: 1100px) {
+        .preview-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .table-panel {
+            position: static !important;
+            max-height: none !important;
+        }
+    }
+
+    .table-preview tbody tr {
+        cursor: pointer;
+    }
+
+        .table-preview tbody tr.row-selected {
+            background-color: var(--primary-light);
+            box-shadow: inset 3px 0 0 var(--primary-color);
+        }
+
+        .table-preview tbody tr:hover {
+            background-color: #F8FAFC;
+        }
+
+    .detail-panel {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+    }
+
+        .detail-panel .form-label {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: var(--text-dark);
+        }
+
+        .detail-panel .form-control, .detail-panel .form-select {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+    .detail-readonly-box {
+        background: var(--bg-main);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    .id-badge-sm {
+        background: var(--primary-color);
+        color: #fff;
+        font-family: monospace;
+        font-size: 13px;
+        font-weight: bold;
+        padding: 4px 12px;
+        border-radius: 20px;
+        display: inline-block;
+    }
+
+    .table-panel {
+        position: sticky;
+        top: 16px;
+        max-height: calc(100vh - 32px);
+        overflow-y: auto;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+    }
+
+    .table-compact th, .table-compact td {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+        vertical-align: middle;
+    }
+
+    .table-compact .name-input {
+        border: none;
+        background: transparent;
+        padding: 2px 4px;
+        font-size: 0.85rem;
+    }
+
+        .table-compact .name-input:focus {
+            background: var(--bg-main);
+            box-shadow: none;
+        }
+
+    /* 🟢🟡🔴 CSS จุดแสดงสถานะความสมบูรณ์ข้อมูล */
+    .status-dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        display: inline-block;
+        transition: all 0.2s ease;
+    }
+
+        .status-dot.green {
+            background-color: #10B981;
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+        }
+
+        .status-dot.orange {
+            background-color: #F59E0B;
+            box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+        }
+
+        .status-dot.red {
+            background-color: #EF4444;
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+        }
+</style>
+
+<div class="container-fluid py-4 preview-wrapper" id="previewWrapper">
     <div class="preview-card mb-4">
         <div class="preview-header-banner d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
@@ -19,18 +191,27 @@
                     เอกสาร: <strong>@documentTitle</strong> | ใบส่งของ: <strong>@invoiceNo</strong> | ผู้รับ: <strong>@receivedBy</strong>
                 </p>
             </div>
-            <span class="badge bg-info text-dark font-monospace fs-6 px-3 py-2">
-                ประเภท: @importType
-            </span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-info text-dark font-monospace fs-6 px-3 py-2">
+                    ประเภท: @importType
+                </span>
+                <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3" id="wideModeBtn" onclick="toggleWideMode()">
+                    <i class="bi bi-arrows-fullscreen me-1"></i> <span id="wideModeLabel">ขยายหน้าจอ</span>
+                </button>
+            </div>
         </div>
 
         <div class="card-body p-4">
-            <!-- ปุ่มจัดการเลือกหลายรายการ -->
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div class="fw-bold text-secondary">รายการทั้งหมด: <span id="kpiTotalItems">@Model.Count</span> รายการ</div>
-                <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="deleteSelectedRows()">
-                    <i class="bi bi-trash-fill me-1"></i> ลบรายการที่เลือก (<span id="selectedCount">0</span>)
-                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" onclick="deleteSelectedRows()">
+                        <i class="bi bi-trash-fill me-1"></i> ลบรายการที่เลือก (<span id="selectedCount">0</span>)
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm rounded-pill px-3" onclick="deleteAllRows()">
+                        <i class="bi bi-trash3-fill me-1"></i> ลบทั้งหมด
+                    </button>
+                </div>
             </div>
 
             <form asp-action="ConfirmReceive" method="post" id="receiveConfirmForm">
@@ -38,102 +219,402 @@
                 <input type="hidden" name="invoiceNo" value="@invoiceNo" />
                 <input type="hidden" name="receivedBy" value="@receivedBy" />
                 <input type="hidden" name="importType" value="@importType" />
-                <input type="hidden" name="tempFilePath" value="@ViewBag.TempFilePath" />
 
-                <div class="table-responsive rounded-3 border">
-                    <table class="table table-hover align-middle table-preview" id="previewTable">
-                        <thead>
-                            <tr>
-                                <th style="width: 3%;" class="text-center">
-                                    <input type="checkbox" id="selectAll" class="form-check-input" onchange="toggleSelectAll(this)" />
-                                </th>
-                                <th style="width: 3%;" class="text-center">#</th>
-                                <th style="width: 22%;">รายการ / บรรจุภัณฑ์</th>
-                                <th style="width: 8%;" class="text-center">ประเภท/บัญชี</th>
-                                <th style="width: 9%;" class="text-end">จำนวนรับ</th>
-                                <th style="width: 10%;" class="text-end">ราคา/หน่วย</th>
-                                <th style="width: 11%;" class="text-end">ราคารวม</th>
-                                <th style="width: 10%;">LOT NUMBER</th>
-                                <th style="width: 11%;">วันหมดอายุ</th>
-                                <th style="width: 10%;">หมายเหตุ</th>
-                                <th style="width: 3%;" class="text-center">ลบ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (int i = 0; i < Model.Count; i++)
-                            {
-                                var item = Model[i];
-                                var rowTotal = item.Quantity_received * (item.Price ?? 0);
-                                <tr>
-                                    <!-- Checkbox เลือกรายการ -->
-                                    <td class="text-center">
-                                        <input type="checkbox" class="form-check-input row-checkbox" onchange="updateSelectedCount()" />
-                                    </td>
+                <div class="preview-layout">
+                    <!-- ฝั่งซ้าย: รายละเอียด -->
+                    <div class="detail-panel" id="detailPanel">
+                        <div id="detailEmptyState" class="text-center text-muted py-5">
+                            <i class="bi bi-cursor-fill fs-1 d-block mb-2 opacity-50"></i>
+                            คลิกที่รายการในตารางเพื่อดู/แก้ไขรายละเอียด
+                        </div>
 
-                                    <input type="hidden" name="items.Index" value="@i" class="item-index" />
-                                    <input type="hidden" name="items[@i].MatchedMedicineId" value="@item.MatchedMedicineId" />
-                                    <input type="hidden" name="items[@i].MatchedMedicineName" value="@item.MatchedMedicineName" />
-                                    <input type="hidden" name="items[@i].IsDuplicateOrSimilar" value="@item.IsDuplicateOrSimilar.ToString().ToLower()" />
-                                    <input type="hidden" name="items[@i].SheetName" value="@item.SheetName" />
-                                    <input type="hidden" name="items[@i].Unit_id" value="@item.Unit_id" />
-                                    <input type="hidden" name="items[@i].Remark" value="@item.Remark" />
+                        <div id="detailForm" class="d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0"><i class="bi bi-clipboard2-data-fill me-2 text-primary"></i>รายละเอียดรายการ #<span id="detailRowNo">-</span></h6>
+                                <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="deleteCurrentFromPanel()" title="ลบรายการนี้">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </div>
 
-                                    <td class="row-number">@(i + 1)</td>
+                            <!-- 🟡 กล่องแจ้งเตือนพบรายการซ้ำ -->
+                            <div id="detailDupBadge" class="alert alert-warning py-3 px-3 small mb-3 d-none border border-warning">
+                                <div class="fw-bold mb-2 text-dark d-flex align-items-center flex-wrap gap-1">
+                                    <i class="bi bi-exclamation-triangle-fill me-1 text-warning fs-6"></i>
+                                    <span>พบรายการที่คล้ายกันในระบบ:</span>
+                                    <span class="badge bg-dark text-white font-monospace px-2 py-1" id="detailDupIdBadge">-</span>
+                                    <span id="detailDupText" class="fw-bold text-dark"></span>
+                                </div>
+                                <div class="pt-2 border-top border-warning-subtle">
+                                    <label class="form-label d-block fw-bold text-dark mb-1">เลือกรูปแบบการจัดการข้อมูล:</label>
+                                    <div class="d-flex flex-column gap-2">
+                                        <!-- ตัวเลือกที่ 1: อัปเดตข้อมูลเดิม -->
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="dupActionRadio" id="dupActUpdate" value="UPDATE" onchange="syncDupActionToRow(this.value)">
+                                            <label class="form-check-label text-dark" for="dupActUpdate">
+                                                <i class="bi bi-arrow-repeat text-primary me-1"></i><strong>อัปเดตข้อมูลเดิม:</strong> ใช้รหัสเดิมและอัปเดตข้อมูลล่าสุดเข้าตัวยาเดิมในระบบ
+                                            </label>
+                                        </div>
 
-                                    <td>
-                                        <input type="text" name="items[@i].Medicine_name" value="@item.Medicine_name" class="form-control form-control-sm fw-bold text-dark mb-1" required />
-                                        <input type="text" name="items[@i].Packing_Size" value="@item.Packing_Size" class="form-control form-control-sm text-muted" placeholder="ขนาดบรรจุ" />
-                                    </td>
+                                        <!-- ตัวเลือกที่ 2 (เพิ่มใหม่): เพิ่มเป็นรายการใหม่ -->
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="dupActionRadio" id="dupActAddNew" value="ADD_NEW" onchange="syncDupActionToRow(this.value)">
+                                            <label class="form-check-label text-dark" for="dupActAddNew">
+                                                <i class="bi bi-plus-circle-fill text-success me-1"></i><strong>เพิ่มเป็นรายการใหม่ (สร้างรหัสใหม่):</strong> คงรายการเดิมไว้ แล้วสร้างรหัสยาใหม่สำหรับล็อต/วันหมดอายุนี้ เพื่อไม่ให้เกิดการแจ้งเตือนหมดอายุที่ผิดพลาด
+                                            </label>
+                                        </div>
 
-                                    <td class="text-center">
-                                        <input type="text" name="items[@i].Account_Type" value="@item.Account_Type" class="form-control form-control-sm text-center font-monospace fw-bold" />
-                                    </td>
+                                        <!-- ตัวเลือกที่ 3: ปิดใช้งานรายการเก่า แล้วเพิ่มใหม่ -->
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="dupActionRadio" id="dupActDisableNew" value="DISABLE_OLD_ADD_NEW" onchange="syncDupActionToRow(this.value)">
+                                            <label class="form-check-label text-dark" for="dupActDisableNew">
+                                                <i class="bi bi-x-circle-fill text-danger me-1"></i><strong>ปิดใช้งานรายการเก่า และเพิ่มรายการใหม่:</strong> ยกเลิกยาเดิมในคลัง แล้วสร้างรหัสยาใหม่แทน
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-                                    <td>
-                                        <input type="number" name="items[@i].Quantity_received" value="@item.Quantity_received" class="form-control form-control-sm text-end fw-bold text-primary qty-input" min="0" onchange="recalculateRow(this)" />
-                                    </td>
+                            <div class="mb-2">
+                                <span class="text-muted small">รหัสอ้างอิงในระบบ:</span>
+                                <span class="id-badge-sm" id="detailMatchedId">-</span>
+                            </div>
 
-                                    <td>
-                                        <input type="number" step="0.01" name="items[@i].Price" value="@(item.Price?.ToString("F2") ?? "0.00")" class="form-control form-control-sm text-end price-input" onchange="recalculateRow(this)" />
-                                    </td>
+                            <!-- ข้อมูลพื้นฐาน -->
+                            <div class="section-header">ข้อมูลพื้นฐาน</div>
+                            <div class="mb-3">
+                                <label class="form-label">ชื่อยา / เวชภัณฑ์</label>
+                                <input type="text" id="detail_name" class="form-control form-control-sm" oninput="syncDetailToRow('detail_name')" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">ขนาดบรรจุ (Packing)</label>
+                                <input type="text" id="detail_packing" class="form-control form-control-sm" oninput="syncDetailToRow('detail_packing')" />
+                            </div>
 
-                                    <td class="text-end fw-bold text-dark row-total-val">
-                                        @rowTotal.ToString("N2")
-                                    </td>
+                            <!-- สต็อกและราคา -->
+                            <div class="section-header">สต็อกและราคา</div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">จำนวนรับ</label>
+                                    <input type="number" min="0" id="detail_qty" class="form-control form-control-sm" oninput="syncDetailToRow('detail_qty')" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">ราคา/หน่วย</label>
+                                    <input type="number" step="0.01" id="detail_price" class="form-control form-control-sm" oninput="syncDetailToRow('detail_price')" />
+                                </div>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">ราคารวม</label>
+                                    <div class="detail-readonly-box fw-bold text-dark" id="detail_total">0.00</div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">สต็อกขั้นต่ำ (Safety Stock)</label>
+                                    <input type="number" min="0" id="detail_safetystock" class="form-control form-control-sm" oninput="syncDetailToRow('detail_safetystock')" />
+                                </div>
+                            </div>
 
-                                    <td>
-                                        <input type="text" name="items[@i].Lot_number" value="@(string.IsNullOrEmpty(item.Lot_number) ? "-" : item.Lot_number)" class="form-control form-control-sm font-monospace" />
-                                    </td>
+                            <!-- ล็อตและวันหมดอายุ -->
+                            <div class="section-header">ล็อตและวันหมดอายุ</div>
+                            <div class="mb-3">
+                                <label class="form-label">เลขล็อต (Lot Number)</label>
+                                <input type="text" id="detail_lot" class="form-control form-control-sm" oninput="syncDetailToRow('detail_lot')" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">วันหมดอายุ</label>
+                                <input type="date" id="detail_expiry" class="form-control form-control-sm" oninput="syncDetailToRow('detail_expiry')" />
+                            </div>
 
-                                    <td>
-                                        <input type="date" name="items[@i].Expiry_date" value="@item.Expiry_date.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
-                                    </td>
+                            <!-- ข้อมูลเพิ่มเติม -->
+                            <div class="section-header">ข้อมูลเพิ่มเติม</div>
+                            <div class="mb-3">
+                                <label class="form-label">ประเภท/บัญชียา</label>
+                                <input type="text" id="detail_account" class="form-control form-control-sm" oninput="syncDetailToRow('detail_account')" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">หมวดหมู่</label>
+                                <input type="text" id="detail_category" class="form-control form-control-sm" oninput="syncDetailToRow('detail_category')" />
+                            </div>
+                            <div class="mb-1">
+                                <label class="form-label">หมายเหตุ</label>
+                                <input type="text" id="detail_remark" class="form-control form-control-sm" oninput="syncDetailToRow('detail_remark')" />
+                            </div>
+                        </div>
+                    </div>
 
-                                    <td>
-                                        <small class="text-muted">@(string.IsNullOrEmpty(item.Remark) ? "-" : item.Remark)</small>
-                                    </td>
+                    <!-- ฝั่งขวา: รายการแบบย่อ พร้อมจุดแสดงสถานะ -->
+                    <div class="table-panel" id="tablePanelWrapper">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle table-preview table-compact mb-0" id="previewTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 10%;" class="text-center">
+                                            <input type="checkbox" id="selectAll" class="form-check-input" onchange="toggleSelectAll(this)" onclick="event.stopPropagation()" />
+                                        </th>
+                                        <th style="width: 8%;" class="text-center">สถานะ</th>
+                                        <th style="width: 10%;" class="text-center">#</th>
+                                        <th>ชื่อยา / เวชภัณฑ์</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < Model.Count; i++)
+                                    {
+                                        var item = Model[i];
+                                        var matchedId = !string.IsNullOrEmpty(item.MatchedMedicineId) && !item.MatchedMedicineId.StartsWith("MED-TEMP")
+                                        ? item.MatchedMedicineId
+                                        : $"{importType}{(i + 1):D3}";
 
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeRow(this)">
-                                            <i class="bi bi-trash-fill"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                                        <tr onclick="selectRow(this)"
+                                            data-edited="false"
+                                            data-duplicate="@item.IsDuplicateOrSimilar.ToString().ToLower()"
+                                            data-matched-name="@item.MatchedMedicineName"
+                                            data-matched-id="@matchedId">
+
+                                            <td class="text-center" onclick="event.stopPropagation()">
+                                                <input type="checkbox" class="form-check-input row-checkbox" onchange="updateSelectedCount()" />
+                                            </td>
+
+                                            <!-- 🔴🟡🟢 แสดงจุดสถานะ -->
+                                            <td class="text-center">
+                                                <span class="status-dot red" title="ยังไม่ได้แก้ไข/ข้อมูลไม่ครบ"></span>
+                                            </td>
+
+                                            <input type="hidden" name="items.Index" value="@i" class="item-index" />
+                                            <input type="hidden" name="items[@i].MatchedMedicineId" value="@matchedId" class="matched-id-input" />
+                                            <input type="hidden" name="items[@i].MatchedMedicineName" value="@item.MatchedMedicineName" />
+                                            <input type="hidden" name="items[@i].IsDuplicateOrSimilar" value="@item.IsDuplicateOrSimilar.ToString().ToLower()" />
+                                            <input type="hidden" name="items[@i].DuplicateAction" value="UPDATE" class="dup-action-input" />
+                                            <input type="hidden" name="items[@i].SheetName" value="@item.SheetName" />
+                                            <input type="hidden" name="items[@i].SafetyStock" value="@(item.SafetyStock ?? 0)" class="safetystock-input" />
+                                            <input type="hidden" name="items[@i].Packing_Size" value="@item.Packing_Size" class="packing-input" />
+                                            <input type="hidden" name="items[@i].Account_Type" value="@item.Account_Type" class="account-input" />
+                                            <input type="hidden" name="items[@i].Category" value="@item.Category" class="category-input" />
+                                            <input type="hidden" name="items[@i].Quantity_received" value="@item.Quantity_received" class="qty-input" />
+                                            <input type="hidden" name="items[@i].Price" value="@(item.Price?.ToString("F2") ?? "0.00")" class="price-input" />
+                                            <input type="hidden" name="items[@i].Lot_number" value="@(string.IsNullOrEmpty(item.Lot_number) ? "-" : item.Lot_number)" class="lot-input" />
+                                            <input type="hidden" name="items[@i].Expiry_date" value="@item.Expiry_date.ToString("yyyy-MM-dd")" class="expiry-input" />
+                                            <input type="hidden" name="items[@i].Remark" value="@item.Remark" class="remark-input" />
+
+                                            <td class="row-number text-center">@(i + 1)</td>
+
+                                            <td>
+                                                <input type="text" name="items[@i].Medicine_name" value="@item.Medicine_name" class="form-control form-control-sm fw-bold text-dark name-input" required onchange="onFieldChange(this)" onfocus="selectRow(this.closest('tr'))" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mt-4">
                     <a asp-action="Index" class="btn btn-outline-secondary px-4 rounded-pill">ย้อนกลับ</a>
-                    <button type="submit" class="btn btn-success px-5 py-2 rounded-pill fw-bold">ยืนยันการบันทึกข้อมูล</button>
+
+                    <button type="button" id="btnConfirmSubmit" class="btn btn-success px-5 py-2 rounded-pill fw-bold">
+                        ยืนยันการบันทึกข้อมูล
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
+    document.getElementById('btnConfirmSubmit').addEventListener('click', function () {
+        const totalItems = document.querySelectorAll('#previewTable tbody tr').length;
+
+        if (totalItems === 0) {
+            Swal.fire('ข้อผิดพลาด', 'ไม่มีรายการให้บันทึก', 'error');
+            return;
+        }
+
+        Swal.fire({
+            title: 'ยืนยันการบันทึกข้อมูล?',
+            text: `คุณต้องการบันทึกข้อมูลรับเข้าคลังจำนวน ${totalItems} รายการ ใช่หรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#10B981',
+            cancelButtonColor: '#EF4444',
+            confirmButtonText: 'ใช่, บันทึกข้อมูล!',
+            cancelButtonText: 'กลับไปตรวจสอบ'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'กำลังบันทึกข้อมูล...',
+                    text: 'กรุณารอสักครู่ ระบบกำลังประมวลผล',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                document.getElementById('receiveConfirmForm').submit();
+            }
+        });
+    });
+</script>
+
+<script>
+    let currentSelectedRow = null;
+
+    function toggleWideMode() {
+        const wrapper = document.getElementById('previewWrapper');
+        const isWide = wrapper.classList.toggle('wide-mode');
+        document.body.classList.toggle('preview-wide-mode', isWide);
+        document.getElementById('wideModeLabel').textContent = isWide ? 'ย่อหน้าจอ' : 'ขยายหน้าจอ';
+    }
+
+    function selectRow(tr) {
+        if (!tr) return;
+        document.querySelectorAll('#previewTable tbody tr').forEach(r => r.classList.remove('row-selected'));
+        tr.classList.add('row-selected');
+        currentSelectedRow = tr;
+        loadDetailPanel(tr);
+    }
+
+    function showEmptyDetailState() {
+        document.getElementById('detailEmptyState').classList.remove('d-none');
+        document.getElementById('detailForm').classList.add('d-none');
+    }
+
+    function loadDetailPanel(tr) {
+        document.getElementById('detailEmptyState').classList.add('d-none');
+        document.getElementById('detailForm').classList.remove('d-none');
+
+        document.getElementById('detailRowNo').textContent = tr.querySelector('.row-number').textContent;
+        document.getElementById('detail_name').value = tr.querySelector('.name-input').value;
+        document.getElementById('detail_packing').value = tr.querySelector('.packing-input').value;
+        document.getElementById('detail_qty').value = tr.querySelector('.qty-input').value;
+        document.getElementById('detail_price').value = tr.querySelector('.price-input').value;
+
+        const safetyInput = tr.querySelector('.safetystock-input');
+        document.getElementById('detail_safetystock').value = safetyInput ? safetyInput.value : 0;
+
+        document.getElementById('detail_lot').value = tr.querySelector('.lot-input').value;
+        document.getElementById('detail_expiry').value = tr.querySelector('.expiry-input').value;
+        document.getElementById('detail_account').value = tr.querySelector('.account-input').value;
+        document.getElementById('detail_remark').value = tr.querySelector('.remark-input').value;
+        document.getElementById('detail_category').value = tr.querySelector('.category-input') ? tr.querySelector('.category-input').value : '';
+
+        const matchedId = tr.dataset.matchedId || tr.querySelector('.matched-id-input')?.value;
+        const matchedName = tr.dataset.matchedName || '';
+        const matchedBadge = document.getElementById('detailMatchedId');
+
+        if (matchedId && matchedId.trim() !== '') {
+            matchedBadge.textContent = matchedId;
+            matchedBadge.style.backgroundColor = 'var(--primary-color)';
+        }
+
+        const dupBadge = document.getElementById('detailDupBadge');
+        if (tr.dataset.duplicate === 'true') {
+            dupBadge.classList.remove('d-none');
+            const dupIdBadge = document.getElementById('detailDupIdBadge');
+            if (dupIdBadge) dupIdBadge.textContent = matchedId || '-';
+            document.getElementById('detailDupText').textContent = matchedName;
+
+            const actionInput = tr.querySelector('.dup-action-input');
+            const currentAction = actionInput ? actionInput.value : 'UPDATE';
+
+            // 🛠️ อัปเดตการเลือก Radio Button ให้รองรับ ADD_NEW
+            if (currentAction === 'DISABLE_OLD_ADD_NEW') {
+                document.getElementById('dupActDisableNew').checked = true;
+            } else if (currentAction === 'ADD_NEW') {
+                document.getElementById('dupActAddNew').checked = true;
+            } else {
+                document.getElementById('dupActUpdate').checked = true;
+            }
+        } else {
+            dupBadge.classList.add('d-none');
+        }
+
+        updateDetailTotal();
+    }
+
+    function updateRowStatus(tr) {
+        if (!tr) return;
+
+        const name = tr.querySelector('.name-input')?.value.trim();
+        const qty = parseFloat(tr.querySelector('.qty-input')?.value) || 0;
+        const price = parseFloat(tr.querySelector('.price-input')?.value) || 0;
+        const lot = tr.querySelector('.lot-input')?.value.trim();
+        const expiry = tr.querySelector('.expiry-input')?.value;
+        const isEdited = tr.dataset.edited === 'true';
+
+        const isComplete = name !== '' && qty > 0 && price >= 0 && lot !== '' && lot !== '-' && expiry !== '';
+
+        const dot = tr.querySelector('.status-dot');
+        if (!dot) return;
+
+        dot.classList.remove('green', 'orange', 'red');
+
+        if (isComplete) {
+            dot.classList.add('green');
+            dot.title = "ข้อมูลครบถ้วนสมบูรณ์";
+        } else if (isEdited) {
+            dot.classList.add('orange');
+            dot.title = "แก้ไขแล้วแต่ข้อมูลยังไม่ครบ";
+        } else {
+            dot.classList.add('red');
+            dot.title = "ยังไม่ได้แก้ไข/ข้อมูลไม่สมบูรณ์";
+        }
+    }
+
+    function syncDupActionToRow(actionValue) {
+        if (!currentSelectedRow) return;
+        const actionInput = currentSelectedRow.querySelector('.dup-action-input');
+        if (actionInput) actionInput.value = actionValue;
+    }
+
+    function updateDetailTotal() {
+        const qty = parseFloat(document.getElementById('detail_qty').value) || 0;
+        const price = parseFloat(document.getElementById('detail_price').value) || 0;
+        document.getElementById('detail_total').textContent = (qty * price).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    const detailFieldMap = {
+        detail_name: 'name-input',
+        detail_packing: 'packing-input',
+        detail_qty: 'qty-input',
+        detail_price: 'price-input',
+        detail_safetystock: 'safetystock-input',
+        detail_lot: 'lot-input',
+        detail_expiry: 'expiry-input',
+        detail_account: 'account-input',
+        detail_category: 'category-input',
+        detail_remark: 'remark-input'
+    };
+
+    function syncDetailToRow(fieldId) {
+        if (!currentSelectedRow) return;
+        const cls = detailFieldMap[fieldId];
+        if (!cls) return;
+
+        const input = currentSelectedRow.querySelector('.' + cls);
+        if (input) {
+            input.value = document.getElementById(fieldId).value;
+        }
+
+        currentSelectedRow.dataset.edited = 'true';
+
+        if (fieldId === 'detail_qty' || fieldId === 'detail_price') {
+            recalculateRow(input);
+            updateDetailTotal();
+        }
+
+        updateRowStatus(currentSelectedRow);
+    }
+
+    function onFieldChange(input) {
+        const tr = input.closest('tr');
+        tr.dataset.edited = 'true';
+        updateRowStatus(tr);
+        if (tr === currentSelectedRow) {
+            loadDetailPanel(tr);
+        }
+    }
+
     function toggleSelectAll(master) {
         const checkboxes = document.querySelectorAll('.row-checkbox');
         checkboxes.forEach(cb => cb.checked = master.checked);
@@ -153,20 +634,50 @@
         }
 
         if (confirm(`คุณต้องการลบรายการที่เลือกจำนวน ${selectedCheckboxes.length} รายการใช่หรือไม่?`)) {
+            let selectedWasRemoved = false;
             selectedCheckboxes.forEach(cb => {
-                cb.closest('tr').remove();
+                const tr = cb.closest('tr');
+                if (tr === currentSelectedRow) selectedWasRemoved = true;
+                tr.remove();
             });
             document.getElementById('selectAll').checked = false;
+            reindexRows();
+            updateSelectedCount();
+            if (selectedWasRemoved) selectFirstRowOrEmpty();
+        }
+    }
+
+    function deleteAllRows() {
+        const rows = document.querySelectorAll('#previewTable tbody tr');
+        if (rows.length === 0) return;
+        if (confirm(`คุณต้องการลบรายการทั้งหมดจำนวน ${rows.length} รายการใช่หรือไม่?`)) {
+            rows.forEach(r => r.remove());
+            document.getElementById('selectAll').checked = false;
+            currentSelectedRow = null;
+            showEmptyDetailState();
             reindexRows();
             updateSelectedCount();
         }
     }
 
-    function removeRow(btn) {
+    function deleteCurrentFromPanel() {
+        if (!currentSelectedRow) return;
         if (confirm("คุณต้องการลบรายการนี้ใช่หรือไม่?")) {
-            btn.closest("tr").remove();
+            const tr = currentSelectedRow;
+            tr.remove();
             reindexRows();
             updateSelectedCount();
+            selectFirstRowOrEmpty();
+        }
+    }
+
+    function selectFirstRowOrEmpty() {
+        const nextRow = document.querySelector('#previewTable tbody tr');
+        if (nextRow) {
+            selectRow(nextRow);
+        } else {
+            currentSelectedRow = null;
+            showEmptyDetailState();
         }
     }
 
@@ -176,15 +687,12 @@
 
         rows.forEach((row, index) => {
             row.querySelector(".row-number").textContent = index + 1;
-
-            // Re-index form input names
             const inputs = row.querySelectorAll("input, select");
             inputs.forEach(input => {
                 if (input.name) {
                     input.name = input.name.replace(/items\[\d+\]/, `items[${index}]`);
                 }
             });
-
             const hiddenIndex = row.querySelector(".item-index");
             if (hiddenIndex) hiddenIndex.value = index;
         });
@@ -192,10 +700,21 @@
 
     function recalculateRow(element) {
         const row = element.closest("tr");
-        const qty = parseFloat(row.querySelector(".qty-input").value) || 0;
-        const price = parseFloat(row.querySelector(".price-input").value) || 0;
+        if (!row) return;
+        const qty = parseFloat(row.querySelector(".qty-input")?.value) || 0;
+        const price = parseFloat(row.querySelector(".price-input")?.value) || 0;
         const rowTotal = qty * price;
 
-        row.querySelector(".row-total-val").textContent = rowTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const totalSpan = row.querySelector(".row-total-val");
+        if (totalSpan) {
+            totalSpan.textContent = rowTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('#previewTable tbody tr').forEach(tr => {
+            updateRowStatus(tr);
+        });
+        selectFirstRowOrEmpty();
+    });
 </script>

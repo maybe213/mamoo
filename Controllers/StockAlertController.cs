@@ -15,7 +15,7 @@ namespace DrugInventoryPro.Controllers
             // ดึงข้อมูลยาและเวชภัณฑ์ทั้งหมดในระบบ (ที่ใช้งานอยู่)
             var allMedicines = await context.Medicines
                 .Include(m => m.MedicineUnit)
-                .Where(m => m.Status != "Inactive")
+                .Where(m => m.Status == "Active")
                 .OrderBy(m => m.Expired_at.HasValue ? m.Expired_at.Value : DateTime.MaxValue)
                 .ToListAsync();
 
