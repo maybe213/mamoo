@@ -8,12 +8,33 @@
 
     var today = DateTime.Today;
     var thirtyDaysFromNow = today.AddDays(30);
+    var ninetyDaysFromNow = today.AddDays(90);
+
+    // เกณฑ์เตือนวันหมดอายุ 3 ระดับ (ใช้แสดงสี badge รายแถวเท่านั้น)
+    var oneMonthFromNow = today.AddMonths(1);
+    var threeMonthsFromNow = today.AddMonths(3);
+    var sixMonthsFromNow = today.AddMonths(6);
 
     // คำนวณสรุปข้อมูลสำหรับ Stats Cards
+    // "หมดอายุภายใน 30 วัน" = หมดอายุแล้ว หรือ เหลืออายุไม่เกิน 30 วัน
+    // "ใกล้หมดอายุภายใน 90 วัน" = เหลืออายุมากกว่า 30 วัน แต่ไม่เกิน 90 วัน
     int totalLots = fefoList?.Count ?? 0;
-    int expiredCount = fefoList?.Count(m => m.Expired_at.HasValue && m.Expired_at.Value.Date < today) ?? 0;
-    int expiringSoonCount = fefoList?.Count(m => m.Expired_at.HasValue && m.Expired_at.Value.Date >= today && m.Expired_at.Value.Date <= thirtyDaysFromNow) ?? 0;
+    int expiredCount = fefoList?.Count(m => m.Expired_at.HasValue && m.Expired_at.Value.Date <= thirtyDaysFromNow) ?? 0;
+    int expiringSoonCount = fefoList?.Count(m => m.Expired_at.HasValue && m.Expired_at.Value.Date > thirtyDaysFromNow && m.Expired_at.Value.Date <= ninetyDaysFromNow) ?? 0;
     int normalCount = totalLots - expiredCount - expiringSoonCount;
+
+    // จัดกลุ่มรายการตามเลขล็อต (Lot) สำหรับ Dropdown "ล็อตยาทั้งหมด"
+    // เรียงกลุ่มตามวันหมดอายุที่เร็วที่สุดในกลุ่ม (FEFO) เพื่อให้ล็อตที่ต้องจ่ายก่อนอยู่บนสุด
+    var lotGroups = fefoList?
+        .GroupBy(m => string.IsNullOrEmpty(m.Lot) ? "N/A" : m.Lot)
+        .Select(g => new
+        {
+            LotNo = g.Key,
+            Items = g.OrderBy(m => m.Expired_at.HasValue ? m.Expired_at.Value : DateTime.MaxValue).ToList(),
+            HasBlocked = g.Any(m => m.Expired_at.HasValue && m.Expired_at.Value.Date <= oneMonthFromNow)
+        })
+        .OrderBy(g => g.Items.First().Expired_at.HasValue ? g.Items.First().Expired_at.Value : DateTime.MaxValue)
+        .ToList();
 }
 
 <style>
@@ -61,6 +82,7 @@
         padding: 16px;
         cursor: pointer;
         transition: transform 0.2s, box-shadow 0.2s;
+        position: relative;
     }
 
         .stat-card-clickable:hover {
@@ -75,6 +97,89 @@
     .stat-number {
         font-size: 1.5rem;
         font-weight: 700;
+    }
+
+    /* 🔽 Panel เต็มความกว้าง: รายการเลขล็อตทั้งหมด (จัดกลุ่มตามเลขล็อต) */
+    .lot-list-header {
+        padding: 14px 16px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--med-text-main);
+        background-color: var(--med-header-bg);
+        border-bottom: 1px solid var(--med-border);
+    }
+
+    .lot-list-body-full {
+        max-height: 480px;
+        overflow-y: auto;
+    }
+
+    /* 🔽 การ์ดจัดกลุ่มตามเลขล็อต ในรายการเลขล็อตทั้งหมด */
+    .lot-group-full {
+        border-bottom: 1px solid var(--med-border);
+    }
+
+        .lot-group-full:last-child {
+            border-bottom: none;
+        }
+
+    .lot-group-header-full {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 16px;
+        cursor: pointer;
+        user-select: none;
+        background-color: #FFFFFF;
+    }
+
+        .lot-group-header-full:hover {
+            background-color: #F8FAFC;
+        }
+
+        .lot-group-header-full.has-blocked {
+            background-color: var(--alert-danger-bg);
+        }
+
+    .lot-group-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        font-size: 0.9rem;
+    }
+
+    .lot-group-count {
+        color: var(--med-text-muted);
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .lot-group-chevron {
+        transition: transform 0.2s;
+        color: var(--med-text-muted);
+        flex-shrink: 0;
+    }
+
+    .lot-group-header-full.open .lot-group-chevron {
+        transform: rotate(180deg);
+    }
+
+    .lot-group-table-wrap {
+        display: none;
+        background-color: #FAFBFC;
+        border-top: 1px solid var(--med-border);
+    }
+
+        .lot-group-table-wrap.show {
+            display: block;
+        }
+
+    /* ปุ่มปิดใช้งานในตาราง (ทั้งตารางหลักและตารางในกลุ่มล็อต) */
+    .btn-disable-inline {
+        font-size: 0.72rem;
+        padding: 2px 8px;
     }
 
     /* Table Styling */
@@ -146,6 +251,26 @@
         border: 1px solid var(--alert-success-border);
     }
 
+    /* เตือนหมดอายุใน 6 เดือน (เขียว) */
+    .badge-alert-green {
+        background-color: var(--alert-success-bg);
+        color: var(--alert-success-text);
+        border: 1px solid var(--alert-success-border);
+        cursor: help;
+    }
+
+    /* เตือนหมดอายุใน 3 เดือน (เหลือง) / 1 เดือน (แดง) ใช้ cursor help ให้รู้ว่าชี้แล้วมีรายละเอียด */
+    .badge-warning, .badge-critical {
+        cursor: help;
+    }
+
+    /* สถานะปกติจริง ๆ (เกิน 6 เดือน) ใช้สีเทากลาง ไม่ปนกับสีเขียวของเกณฑ์เตือน */
+    .badge-normal {
+        background-color: #F1F5F9;
+        color: #475569;
+        border: 1px solid #CBD5E1;
+    }
+
     .code-badge {
         background-color: #F1F5F9;
         color: #475569;
@@ -182,12 +307,28 @@
         </div>
     </div>
 
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-1"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     <!-- Summary Stats Cards (คลิกได้เพื่อกรองข้อมูล) -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="stat-card-clickable" onclick="filterByStatus('ALL')">
+            <div class="stat-card-clickable" id="totalLotsCard" onclick="toggleLotListPanel(event)">
                 <div class="text-muted small fw-bold">ล็อตยาทั้งหมด</div>
                 <div class="stat-number text-dark mt-1">@totalLots <span class="fs-6 text-muted fw-normal">รายการ</span></div>
+                <i id="totalLotsChevron" class="bi bi-chevron-up text-muted position-absolute" style="top: 16px; right: 16px; font-size: 0.8rem;"></i>
             </div>
         </div>
         <div class="col-md-3">
@@ -210,6 +351,124 @@
         </div>
     </div>
 
+    <!-- 🔽 Panel: รายการเลขล็อตทั้งหมด จัดกลุ่มตามเลขล็อต (แสดงเต็มความกว้างหน้าจอ / แสดงค้างไว้เป็นค่าเริ่มต้น) -->
+    <div id="lotListPanel" class="card card-med-table mb-4">
+        <div class="lot-list-header d-flex align-items-center justify-content-between">
+            <span><i class="bi bi-list-ul me-1"></i> รายการเลขล็อตทั้งหมด (เรียงตาม FEFO)</span>
+            <button type="button" class="btn-close" aria-label="ปิด" onclick="closeLotListPanel()"></button>
+        </div>
+        <div class="lot-list-body-full">
+            @if (lotGroups != null && lotGroups.Any())
+            {
+                foreach (var group in lotGroups)
+                {
+                    <div class="lot-group-full">
+                        <div class="lot-group-header-full @(group.HasBlocked ? "has-blocked" : "")" onclick="toggleLotGroup(event, this)">
+                            <div class="lot-group-title">
+                                <span class="lot-badge"><i class="bi bi-tag-fill me-1"></i>@group.LotNo</span>
+                                <span class="lot-group-count">มีจำนวน @group.Items.Count รายการ</span>
+                            </div>
+                            <i class="bi bi-chevron-down lot-group-chevron"></i>
+                        </div>
+
+                        <div class="lot-group-table-wrap">
+                            <div class="table-responsive">
+                                <table class="table table-med table-hover w-100 mb-0">
+                                    <tbody>
+                                        @foreach (var item in group.Items)
+                                        {
+                                            var itemExpired = item.Expired_at.HasValue && item.Expired_at.Value.Date < today;
+                                            var itemRedAlert = !itemExpired && item.Expired_at.HasValue && item.Expired_at.Value.Date <= oneMonthFromNow;
+                                            var itemYellowAlert = !itemExpired && !itemRedAlert && item.Expired_at.HasValue && item.Expired_at.Value.Date <= threeMonthsFromNow;
+                                            var itemGreenAlert = !itemExpired && !itemRedAlert && !itemYellowAlert && item.Expired_at.HasValue && item.Expired_at.Value.Date <= sixMonthsFromNow;
+
+                                            <tr>
+                                                <td class="text-center" style="width: 17%;">
+                                                    <span class="lot-badge">
+                                                        <i class="bi bi-tag-fill me-1"></i>@(string.IsNullOrEmpty(item.Lot) ? "N/A" : item.Lot)
+                                                    </span>
+                                                </td>
+                                                <td class="text-center" style="width: 12%;">
+                                                    <span class="code-badge">@item.Medicine_id</span>
+                                                </td>
+                                                <td class="fw-bold text-dark" style="width: 28%;">
+                                                    <i class="bi bi-capsule-pill me-1 text-primary"></i>
+                                                    @(item.Medicine_name ?? "ไม่ระบุชื่อยา")
+                                                </td>
+                                                <td class="text-center fw-bold fs-6 text-dark" style="width: 12%;">
+                                                    @(item.Stock ?? 0) @(item.MedicineUnit?.Unit_name ?? "หน่วย")
+                                                </td>
+                                                <td class="text-center fw-semibold @(itemExpired || itemRedAlert ? "text-danger" : (itemYellowAlert ? "text-warning" : (itemGreenAlert ? "text-success" : "text-dark")))" style="width: 13%;">
+                                                    @if (item.Expired_at.HasValue)
+                                                    {
+                                                        <i class="bi bi-calendar-event me-1"></i>
+                                                        @item.Expired_at.Value.ToString("dd/MM/yyyy")
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">-</span>
+                                                    }
+                                                </td>
+                                                <td class="text-center" style="width: 18%;">
+                                                    <div class="d-flex flex-column gap-1 align-items-center">
+                                                        @if (itemExpired)
+                                                        {
+                                                            <span class="badge-med-alert badge-critical">
+                                                                <i class="bi bi-x-circle-fill"></i> หมดอายุ! ห้ามจ่ายยา
+                                                            </span>
+                                                        }
+                                                        else if (itemRedAlert)
+                                                        {
+                                                            <span class="badge-med-alert badge-critical">
+                                                                <i class="bi bi-exclamation-triangle-fill"></i> หมดอายุใน30วัน
+                                                            </span>
+                                                        }
+                                                        else if (itemYellowAlert)
+                                                        {
+                                                            <span class="badge-med-alert badge-warning">
+                                                                <i class="bi bi-arrow-up-circle-fill"></i> หมดอายุใน3เดือน
+                                                            </span>
+                                                        }
+                                                        else if (itemGreenAlert)
+                                                        {
+                                                            <span class="badge-med-alert badge-alert-green">
+                                                                <i class="bi bi-info-circle-fill"></i> ติดตามล็อตนี้
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge-med-alert badge-normal">
+                                                                <i class="bi bi-check-circle-fill"></i> ปกติ
+                                                            </span>
+                                                        }
+
+                                                        @if (itemExpired || itemRedAlert)
+                                                        {
+                                                            <form method="post" asp-action="DisableLot" asp-route-id="@item.Medicine_id"
+                                                                  onsubmit="return confirm('ยืนยันปิดใช้งานล็อต @(item.Lot ?? item.Medicine_id) ใช่หรือไม่? ระบบจะงดจ่ายยาล็อตนี้ทันที');">
+                                                                <button type="submit" class="btn btn-outline-danger btn-disable-inline">
+                                                                    <i class="bi bi-slash-circle"></i> ปิดใช้งาน
+                                                                </button>
+                                                            </form>
+                                                        }
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center text-muted small py-4">ไม่มีข้อมูลล็อตยา</div>
+            }
+        </div>
+    </div>
+
     <!-- Search & Filter Controls -->
     <div class="card p-3 mb-4 border-0 shadow-sm" style="background-color: #FFFFFF; border-radius: 10px;">
         <div class="row g-2 align-items-center">
@@ -223,9 +482,9 @@
             <div class="col-md-4">
                 <select id="statusFilter" class="form-select">
                     <option value="ALL">แสดงรายการทั้งหมด</option>
-                    <option value="EXPIRED">หมดอายุแล้ว (Expired)</option>
-                    <option value="EXPIRING_SOON">ใกล้หมดอายุภายใน 30 วัน (FEFO Alert)</option>
-                    <option value="NORMAL">สถานะปกติ (Normal)</option>
+                    <option value="EXPIRED">หมดอายุภายใน30 วัน</option>
+                    <option value="EXPIRING_SOON">ใกล้หมดอายุภายใน 90วัน </option>
+                    <option value="NORMAL">สถานะปกติ</option>
                 </select>
             </div>
         </div>
@@ -251,9 +510,17 @@
                         foreach (var item in fefoList)
                         {
                             bool isExpired = item.Expired_at.HasValue && item.Expired_at.Value.Date < today;
-                            bool isExpiringSoon = item.Expired_at.HasValue && item.Expired_at.Value.Date >= today && item.Expired_at.Value.Date <= thirtyDaysFromNow;
 
-                            string filterCategory = isExpired ? "EXPIRED" : (isExpiringSoon ? "EXPIRING_SOON" : "NORMAL");
+                            // ระดับสี badge 3 ระดับ (ใช้แสดงผลเท่านั้น): แดง (≤1 เดือน) > เหลือง (≤3 เดือน) > เขียว (≤6 เดือน)
+                            bool isRedAlert = !isExpired && item.Expired_at.HasValue && item.Expired_at.Value.Date <= oneMonthFromNow;
+                            bool isYellowAlert = !isExpired && !isRedAlert && item.Expired_at.HasValue && item.Expired_at.Value.Date <= threeMonthsFromNow;
+                            bool isGreenAlert = !isExpired && !isRedAlert && !isYellowAlert && item.Expired_at.HasValue && item.Expired_at.Value.Date <= sixMonthsFromNow;
+
+                            // หมวดหมู่สำหรับตัวกรอง (ตรงกับป้ายกำกับ "หมดอายุภายใน 30 วัน" / "ใกล้หมดอายุภายใน 90 วัน")
+                            bool isWithin30Days = item.Expired_at.HasValue && item.Expired_at.Value.Date <= thirtyDaysFromNow;
+                            bool isWithin90Days = !isWithin30Days && item.Expired_at.HasValue && item.Expired_at.Value.Date <= ninetyDaysFromNow;
+
+                            string filterCategory = isWithin30Days ? "EXPIRED" : (isWithin90Days ? "EXPIRING_SOON" : "NORMAL");
 
                             <tr class="lot-row" data-category="@filterCategory">
                                 <td class="text-center">
@@ -275,7 +542,7 @@
                                     @(item.Stock ?? 0) @(item.MedicineUnit?.Unit_name ?? "หน่วย")
                                 </td>
 
-                                <td class="text-center fw-semibold @(isExpired ? "text-danger" : (isExpiringSoon ? "text-warning" : "text-dark"))">
+                                <td class="text-center fw-semibold @(isExpired || isRedAlert ? "text-danger" : (isYellowAlert ? "text-warning" : (isGreenAlert ? "text-success" : "text-dark")))">
                                     @if (item.Expired_at.HasValue)
                                     {
                                         <i class="bi bi-calendar-event me-1"></i>
@@ -291,21 +558,43 @@
                                     <div class="d-flex flex-column gap-1 align-items-center">
                                         @if (isExpired)
                                         {
-                                            <span class="badge-med-alert badge-critical">
+                                            <span class="badge-med-alert badge-critical" data-bs-toggle="tooltip" data-bs-placement="top" title="หมดอายุแล้ว ห้ามจ่ายยา">
                                                 <i class="bi bi-x-circle-fill"></i> หมดอายุ! ห้ามจ่ายยา
                                             </span>
                                         }
-                                        else if (isExpiringSoon)
+                                        else if (isRedAlert)
                                         {
-                                            <span class="badge-med-alert badge-warning">
+                                            <span class="badge-med-alert badge-critical" data-bs-toggle="tooltip" data-bs-placement="top" title="หมดอายุในอีก 1 เดือน ควรปิดใช้งาน งดจ่าย">
+                                                <i class="bi bi-exclamation-triangle-fill"></i> กำลังจะหมดอายุ
+                                            </span>
+                                        }
+                                        else if (isYellowAlert)
+                                        {
+                                            <span class="badge-med-alert badge-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="หมดอายุในอีก 3 เดือน">
                                                 <i class="bi bi-arrow-up-circle-fill"></i> จ่ายล็อตนี้ก่อน
+                                            </span>
+                                        }
+                                        else if (isGreenAlert)
+                                        {
+                                            <span class="badge-med-alert badge-alert-green" data-bs-toggle="tooltip" data-bs-placement="top" title="หมดอายุในอีก 6 เดือน">
+                                                <i class="bi bi-info-circle-fill"></i> ติดตามล็อตนี้
                                             </span>
                                         }
                                         else
                                         {
-                                            <span class="badge-med-alert badge-success">
+                                            <span class="badge-med-alert badge-normal">
                                                 <i class="bi bi-check-circle-fill"></i> ปกติ
                                             </span>
+                                        }
+
+                                        @if (isExpired || isRedAlert)
+                                        {
+                                            <form method="post" asp-action="DisableLot" asp-route-id="@item.Medicine_id"
+                                                  onsubmit="return confirm('ยืนยันปิดใช้งานล็อต @(item.Lot ?? item.Medicine_id) ใช่หรือไม่? ระบบจะงดจ่ายยาล็อตนี้ทันที');">
+                                                <button type="submit" class="btn btn-outline-danger btn-disable-inline">
+                                                    <i class="bi bi-slash-circle"></i> ปิดใช้งาน
+                                                </button>
+                                            </form>
                                         }
                                     </div>
                                 </td>
@@ -383,11 +672,66 @@
         }
     }
 
+    // 🔹 คลิกที่หัวข้อเลขล็อตในรายการ เพื่อขยาย/ยุบดูรายการยาภายในล็อตนั้น
+    function toggleLotGroup(event, headerEl) {
+        event.stopPropagation();
+        const itemsEl = headerEl.nextElementSibling;
+        if (!itemsEl) return;
+
+        const willOpen = !itemsEl.classList.contains("show");
+        itemsEl.classList.toggle("show", willOpen);
+        headerEl.classList.toggle("open", willOpen);
+    }
+
+    // 🔹 เปิด/ปิด Panel แสดงรายการเลขล็อตทั้งหมด แบบเต็มความกว้างหน้าจอ (การ์ด "ล็อตยาทั้งหมด")
+    // Panel นี้แสดงค้างไว้เป็นค่าเริ่มต้น กดที่การ์ดเพื่อพับ/กางอีกครั้งได้
+    function toggleLotListPanel(event) {
+        event.stopPropagation();
+        const panel = document.getElementById("lotListPanel");
+        const chevron = document.getElementById("totalLotsChevron");
+        if (!panel) return;
+
+        const willOpen = panel.classList.contains("d-none");
+        panel.classList.toggle("d-none", !willOpen);
+
+        if (chevron) {
+            chevron.classList.toggle("bi-chevron-up", willOpen);
+            chevron.classList.toggle("bi-chevron-down", !willOpen);
+        }
+
+        if (willOpen) {
+            filterByStatus("ALL");
+            panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+    }
+
+    function closeLotListPanel() {
+        const panel = document.getElementById("lotListPanel");
+        const chevron = document.getElementById("totalLotsChevron");
+        if (panel) panel.classList.add("d-none");
+        if (chevron) {
+            chevron.classList.remove("bi-chevron-up");
+            chevron.classList.add("bi-chevron-down");
+        }
+    }
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeLotListPanel();
+        }
+    });
+
     document.addEventListener("DOMContentLoaded", function () {
         const searchInput = document.getElementById("searchInput");
         const statusFilter = document.getElementById("statusFilter");
 
         if (searchInput) searchInput.addEventListener("input", filterData);
         if (statusFilter) statusFilter.addEventListener("change", filterData);
+
+        // 🔹 เปิดใช้งาน tooltip ของ Bootstrap สำหรับ badge แจ้งเตือนวันหมดอายุ
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function (el) {
+            new bootstrap.Tooltip(el);
+        });
     });
 </script>

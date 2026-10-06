@@ -27,23 +27,34 @@
     var supCategories = supList.Select(CatName).Distinct().OrderBy(c => c).ToList();
 
     // 🛠️ จัดสถานะวันหมดอายุสำหรับ badge ตามหลัก FEFO (First Expired, First Out)
-    (string cssClass, string label, bool isExpired) ExpiryInfo(DrugInventoryPro.Models.Medicines m)
+    // และกำหนด isBlocked = true เมื่อหมดอายุแล้ว หรือใกล้หมดอายุภายใน 1 เดือน (นโยบายงดจ่ายจริง)
+    var today = DateTime.Today;
+    var oneMonthFromNow = today.AddMonths(1);
+    var threeMonthsFromNow = today.AddMonths(3);
+    var sixMonthsFromNow = today.AddMonths(6);
+
+    (string cssClass, string label, bool isExpired, bool isBlocked) ExpiryInfo(DrugInventoryPro.Models.Medicines m)
     {
         if (!m.Expired_at.HasValue)
         {
-            return ("bg-light text-dark border", "ไม่ระบุวันหมดอายุ", false);
+            return ("bg-light text-dark border", "ไม่ระบุวันหมดอายุ", false, false);
         }
 
-        int daysLeft = (m.Expired_at.Value.Date - DateTime.Today).Days;
+        var expDate = m.Expired_at.Value.Date;
 
-        if (daysLeft < 0)
-            return ("badge-expired", "หมดอายุแล้ว", true);
-        if (daysLeft <= 90)
-            return ("badge-near-expiry", m.Expired_at.Value.ToString("dd/MM/yyyy"), false);
-        if (daysLeft <= 180)
-            return ("badge-warn-expiry", m.Expired_at.Value.ToString("dd/MM/yyyy"), false);
+        if (expDate < today)
+            return ("badge-expired", "หมดอายุแล้ว", true, true);
 
-        return ("bg-light text-dark border", m.Expired_at.Value.ToString("dd/MM/yyyy"), false);
+        if (expDate <= oneMonthFromNow)
+            return ("badge-expired", expDate.ToString("dd/MM/yyyy"), false, true);
+
+        if (expDate <= threeMonthsFromNow)
+            return ("badge-warn-expiry", expDate.ToString("dd/MM/yyyy"), false, false);
+
+        if (expDate <= sixMonthsFromNow)
+            return ("badge-far-expiry", expDate.ToString("dd/MM/yyyy"), false, false);
+
+        return ("bg-light text-dark border", expDate.ToString("dd/MM/yyyy"), false, false);
     }
 }
 
@@ -210,6 +221,13 @@
         border: 1px solid #FDE68A;
     }
 
+    .badge-far-expiry {
+        background-color: #ECFDF5;
+        color: #059669;
+        border: 1px solid #A7F3D0;
+        font-weight: 700;
+    }
+
     .fefo-note {
         background-color: var(--color-primary-light);
         border: 1px solid #BAE6FD;
@@ -364,7 +382,7 @@
                                                 string cat = CatName(med);
                                                 string unit = UnitName(med);
                                                 bool lowStock = (med.Stock ?? 0) <= (med.SafetyStock ?? 0);
-                                                var (expClass, expLabel, isExpired) = ExpiryInfo(med);
+                                                var (expClass, expLabel, isExpired, isBlocked) = ExpiryInfo(med);
                                                 string expiryIso = med.Expired_at?.ToString("yyyy-MM-dd") ?? "";
                                                 <tr class="item-row" data-name="@med.Medicine_name" data-category="@cat" data-expiry="@expiryIso">
                                                     <td>
@@ -389,9 +407,10 @@
                                                         </span>
                                                     </td>
                                                     <td class="text-center">
-                                                        @if (isExpired)
+                                                        @if (isBlocked)
                                                         {
-                                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="ยาหมดอายุแล้ว ไม่สามารถเบิกได้">
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled
+                                                                    title="@(isExpired ? "ยาหมดอายุแล้ว ไม่สามารถเบิกได้" : "ใกล้หมดอายุภายใน 1 เดือน ระบบงดจ่ายตามนโยบาย")">
                                                                 <i class="bi bi-x-lg"></i>
                                                             </button>
                                                         }
@@ -462,7 +481,7 @@
                                                 string cat = CatName(sup);
                                                 string unit = UnitName(sup);
                                                 bool lowStock = (sup.Stock ?? 0) <= (sup.SafetyStock ?? 0);
-                                                var (expClass, expLabel, isExpired) = ExpiryInfo(sup);
+                                                var (expClass, expLabel, isExpired, isBlocked) = ExpiryInfo(sup);
                                                 string expiryIso = sup.Expired_at?.ToString("yyyy-MM-dd") ?? "";
                                                 <tr class="item-row" data-name="@sup.Medicine_name" data-category="@cat" data-expiry="@expiryIso">
                                                     <td>
@@ -487,9 +506,10 @@
                                                         </span>
                                                     </td>
                                                     <td class="text-center">
-                                                        @if (isExpired)
+                                                        @if (isBlocked)
                                                         {
-                                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="เวชภัณฑ์หมดอายุแล้ว ไม่สามารถเบิกได้">
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled
+                                                                    title="@(isExpired ? "เวชภัณฑ์หมดอายุแล้ว ไม่สามารถเบิกได้" : "ใกล้หมดอายุภายใน 1 เดือน ระบบงดจ่ายตามนโยบาย")">
                                                                 <i class="bi bi-x-lg"></i>
                                                             </button>
                                                         }
@@ -620,8 +640,18 @@
 
         function addItem(id, name, stock, unit, price, type, expiryIso, expiryLabel, lot) {
             if (stock <= 0) { alert("รายการนี้หมดคลังชั่วคราว ไม่สามารถเบิกได้ครับ"); return; }
-            if (expiryIso && new Date(expiryIso) < new Date(new Date().toDateString())) {
-                alert("รายการนี้หมดอายุแล้ว ไม่สามารถเบิกได้ครับ (นโยบาย FEFO)"); return;
+            if (expiryIso) {
+                let expDate = new Date(expiryIso);
+                let todayDate = new Date(new Date().toDateString());
+                let oneMonthFromNow = new Date(todayDate);
+                oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+
+                if (expDate < todayDate) {
+                    alert("รายการนี้หมดอายุแล้ว ไม่สามารถเบิกได้ครับ (นโยบาย FEFO)"); return;
+                }
+                if (expDate <= oneMonthFromNow) {
+                    alert("รายการนี้ใกล้หมดอายุภายใน 1 เดือน ระบบงดจ่ายตามนโยบายครับ"); return;
+                }
             }
             if ($(`#row-${id}`).length > 0) { alert("รายการนี้ถูกเพิ่มไปในตะกร้าแล้วครับ"); return; }
 

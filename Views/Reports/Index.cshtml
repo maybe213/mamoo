@@ -1,0 +1,359 @@
+﻿@model DrugInventoryPro.Models.InventoryReportViewModel
+@using System.Globalization
+@using System.Text.Json
+@{
+    ViewData["Title"] = "รายงานประจำเดือน / ประจำปี";
+    var th = new CultureInfo("th-TH");
+    var today = DateTime.Today;
+    string typeText = Model.Type == "monthly" ? "รายเดือน" : Model.Type == "fiscal" ? "ปีงบประมาณ" : "ปีปฏิทิน";
+}
+
+<style>
+    .rp-card {
+        background: #fff;
+        border: 1px solid #E2E8F0;
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    }
+
+    .rp-stat {
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 14px 16px;
+        background: #fff;
+        height: 100%;
+    }
+
+        .rp-stat .lbl {
+            font-size: .8rem;
+            color: #64748B;
+            font-weight: 600;
+        }
+
+        .rp-stat .val {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+    .rp-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .85rem;
+    }
+
+        .rp-table th, .rp-table td {
+            border: 1px solid #CBD5E1;
+            padding: 6px 8px;
+        }
+
+        .rp-table thead th {
+            background: #F1F5F9;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .rp-table td.num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .rp-table tfoot td {
+            font-weight: 700;
+            background: #F8FAFC;
+        }
+
+    .rp-neg {
+        color: #DC2626;
+        font-weight: 700;
+    }
+
+    .rp-head {
+        text-align: center;
+    }
+
+        .rp-head h4 {
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+    .rp-sign {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 48px;
+        text-align: center;
+        font-size: .9rem;
+    }
+
+        .rp-sign div {
+            width: 28%;
+        }
+
+    .print-only {
+        display: none;
+    }
+
+    @@media print {
+        @@page {
+            size: A4 landscape;
+            margin: 12mm;
+        }
+
+        .sidebar, .sticky-top-header, .no-print {
+            display: none !important;
+        }
+
+        .content {
+            margin-left: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
+
+        body {
+            background: #fff !important;
+        }
+
+        .rp-card {
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+
+        .print-only {
+            display: block;
+        }
+
+        .rp-table {
+            font-size: 10px;
+        }
+
+            .rp-table th, .rp-table td {
+                padding: 3px 5px;
+            }
+
+        thead {
+            display: table-header-group;
+        }
+
+        tr {
+            page-break-inside: avoid;
+        }
+    }
+</style>
+
+<div class="container-fluid px-4 py-4">
+
+    <!-- ===== ตัวเลือกงวดรายงาน ===== -->
+    <form method="get" asp-action="Index" class="rp-card mb-3 no-print">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">ประเภทรายงาน</label>
+                <select name="type" id="rpType" class="form-select">
+                    <option value="monthly" selected="@(Model.Type == "monthly")">รายงานประจำเดือน</option>
+                    <option value="annual" selected="@(Model.Type == "annual")">รายงานประจำปี (ม.ค. - ธ.ค.)</option>
+                    <option value="fiscal" selected="@(Model.Type == "fiscal")">รายงานประจำปีงบประมาณ (ต.ค. - ก.ย.)</option>
+                </select>
+            </div>
+            <div class="col-md-4" id="rpMonthWrap">
+                <label class="form-label fw-semibold">เดือน </label>
+                <select name="period" id="rpPeriod" class="form-select">
+                    @if (!Model.AvailableMonths.Any())
+                    {
+                        <option value="">ยังไม่มีรายการรับ-จ่ายในระบบ</option>
+                    }
+                    @foreach (var mo in Model.AvailableMonths.OrderByDescending(x => x))
+                    {
+                        <option value="@mo.ToString("yyyy-MM", CultureInfo.InvariantCulture)" selected="@(Model.Start.Year == mo.Year && Model.Start.Month == mo.Month)">@mo.ToString("MMMM yyyy", th)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4" id="rpYearWrap">
+                <label class="form-label fw-semibold" id="rpYearLabel">ปี (พ.ศ.)</label>
+                <select name="year" id="rpYear" class="form-select"></select>
+            </div>
+            <div class="col-md-4 d-flex flex-wrap gap-2 justify-content-md-end ms-md-auto">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> แสดงรายงาน</button>
+                <a class="btn btn-success" asp-action="ExportExcel" asp-route-type="@Model.Type" asp-route-year="@Model.Year" asp-route-month="@Model.Month">
+                    <i class="bi bi-file-earmark-excel"></i> ส่งออก Excel (ฝ่ายบัญชี)
+                </a>
+                <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์ / PDF</button>
+            </div>
+        </div>
+    </form>
+
+    @if (Model.IsOpenPeriod)
+    {
+        <div class="alert alert-warning no-print py-2">
+            <i class="bi bi-info-circle"></i> งวดนี้ยังไม่สิ้นสุด ข้อมูลเป็นยอดถึงวันที่ @DateTime.Today.ToString("d MMMM yyyy", th) ควรออกรายงานฉบับส่งฝ่ายบัญชีหลังสิ้นงวด
+        </div>
+    }
+    @if (Model.NegativeClosingCount > 0)
+    {
+        <div class="alert alert-danger no-print py-2">
+            <i class="bi bi-exclamation-triangle"></i> พบ @Model.NegativeClosingCount รายการที่ยอดคงเหลือติดลบ (ตัวเลขสีแดง) แปลว่ามีการจ่ายมากกว่าที่บันทึกใบรับเข้าไว้ในระบบ ควรตรวจสอบก่อนส่งฝ่ายบัญชี
+        </div>
+    }
+
+    <div class="rp-card">
+
+        <!-- ===== หัวรายงาน ===== -->
+        <div class="rp-head mb-3">
+            <h4>@Model.Title</h4>
+            <div>สถานบริการ PCC ท่าทองใหม่ อ.กาญจนดิษฐ์ (09156) ต.ท่าทองใหม่ อ.กาญจนดิษฐ์ จ.สุราษฎร์ธานี</div>
+            <div>@Model.PeriodLabel</div>
+            <div class="text-muted small">พิมพ์เมื่อ @Model.GeneratedAt.ToString("d MMMM yyyy HH:mm", th) น. โดย @Model.PreparedBy</div>
+        </div>
+
+        <!-- ===== สรุปมูลค่า ===== -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3"><div class="rp-stat"><div class="lbl">มูลค่ายอดยกมา</div><div class="val">@Model.TotalOpeningValue.ToString("N2") <small class="fw-normal text-muted">บาท</small></div></div></div>
+            <div class="col-6 col-lg-3"><div class="rp-stat"><div class="lbl">มูลค่ารับเข้า</div><div class="val text-success">@Model.TotalReceivedValue.ToString("N2") <small class="fw-normal text-muted">บาท</small></div></div></div>
+            <div class="col-6 col-lg-3"><div class="rp-stat"><div class="lbl">มูลค่าจ่ายออก</div><div class="val text-danger">@Model.TotalDispensedValue.ToString("N2") <small class="fw-normal text-muted">บาท</small></div></div></div>
+            <div class="col-6 col-lg-3"><div class="rp-stat"><div class="lbl">มูลค่าคงเหลือยกไป</div><div class="val">@Model.TotalClosingValue.ToString("N2") <small class="fw-normal text-muted">บาท</small></div></div></div>
+        </div>
+
+        <!-- ===== สรุปรายเดือน (เฉพาะรายงานประจำปี) ===== -->
+        @if (Model.Months.Count > 1)
+        {
+            <h6 class="fw-bold mb-2">สรุปมูลค่ารายเดือน</h6>
+            <div class="table-responsive mb-4">
+                <table class="rp-table">
+                    <thead>
+                        <tr><th>เดือน</th><th>มูลค่ายกมา (บาท)</th><th>มูลค่ารับ (บาท)</th><th>มูลค่าจ่าย (บาท)</th><th>มูลค่าคงเหลือ (บาท)</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mo in Model.Months)
+                        {
+                            <tr>
+                                <td>@mo.Label</td>
+                                <td class="num">@mo.OpeningValue.ToString("N2")</td>
+                                <td class="num">@mo.ReceivedValue.ToString("N2")</td>
+                                <td class="num">@mo.DispensedValue.ToString("N2")</td>
+                                <td class="num">@mo.ClosingValue.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <!-- ===== รายละเอียดรายการยา ===== -->
+        <h6 class="fw-bold mb-2">รายละเอียดรายการยาและเวชภัณฑ์</h6>
+        <div class="table-responsive">
+            <table class="rp-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2">ลำดับ</th>
+                        <th rowspan="2">รหัสยา</th>
+                        <th rowspan="2">ชื่อยา-เวชภัณฑ์</th>
+                        <th rowspan="2">หน่วย</th>
+                        <th rowspan="2">ราคา/หน่วย</th>
+                        <th colspan="2">ยอดยกมา</th>
+                        <th colspan="2">รับ</th>
+                        <th colspan="2">จ่าย</th>
+                        <th colspan="2">คงเหลือ</th>
+                    </tr>
+                    <tr>
+                        <th>จำนวน</th>
+                        <th>มูลค่า</th>
+                        <th>จำนวน</th>
+                        <th>มูลค่า</th>
+                        <th>จำนวน</th>
+                        <th>มูลค่า</th>
+                        <th>จำนวน</th>
+                        <th>มูลค่า</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Rows.Count == 0)
+                    {
+                        <tr><td colspan="13" class="text-center text-muted py-4">ไม่มีรายการรับ-จ่ายในงวดนี้</td></tr>
+                    }
+                    @{
+                        int no = 1;
+                    }
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr>
+                            <td class="text-center">@(no++)</td>
+                            <td>@r.MedicineId</td>
+                            <td>@r.Name</td>
+                            <td class="text-center">@r.Unit</td>
+                            <td class="num">@r.Price.ToString("N2")</td>
+                            <td class="num @(r.OpeningQty < 0 ? "rp-neg" : "")">@r.OpeningQty.ToString("N0")</td>
+                            <td class="num">@r.OpeningValue.ToString("N2")</td>
+                            <td class="num">@r.ReceivedQty.ToString("N0")</td>
+                            <td class="num">@r.ReceivedValue.ToString("N2")</td>
+                            <td class="num">@r.DispensedQty.ToString("N0")</td>
+                            <td class="num">@r.DispensedValue.ToString("N2")</td>
+                            <td class="num @(r.ClosingQty < 0 ? "rp-neg" : "")">@r.ClosingQty.ToString("N0")</td>
+                            <td class="num">@r.ClosingValue.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.Rows.Count > 0)
+                {
+                    <tfoot>
+                        <tr>
+                            <td colspan="6" class="num">รวมมูลค่าทั้งสิ้น (บาท)</td>
+                            <td class="num">@Model.TotalOpeningValue.ToString("N2")</td>
+                            <td></td>
+                            <td class="num">@Model.TotalReceivedValue.ToString("N2")</td>
+                            <td></td>
+                            <td class="num">@Model.TotalDispensedValue.ToString("N2")</td>
+                            <td></td>
+                            <td class="num">@Model.TotalClosingValue.ToString("N2")</td>
+                        </tr>
+                    </tfoot>
+                }
+            </table>
+        </div>
+
+        <div class="text-muted small mt-2">
+            หมายเหตุ: คำนวณจากใบรับเข้าและใบเบิกที่อนุมัติแล้วซึ่งบันทึกในระบบเท่านั้น • แสดงเฉพาะรายการที่มีรับหรือจ่ายในงวด • มูลค่าใช้ราคาต่อหน่วยปัจจุบันในทะเบียนยา
+        </div>
+
+        <div class="rp-sign">
+            <div>ผู้จัดทำ<br /><br />................................<br />(................................)</div>
+            <div>ผู้ตรวจสอบ<br /><br />................................<br />(................................)</div>
+            <div>ผู้อนุมัติ<br /><br />................................<br />(................................)</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var type = document.getElementById('rpType');
+        var monthWrap = document.getElementById('rpMonthWrap');
+        var yearWrap = document.getElementById('rpYearWrap');
+        var periodSel = document.getElementById('rpPeriod');
+        var yearSel = document.getElementById('rpYear');
+        var yearLabel = document.getElementById('rpYearLabel');
+        var annualYears = @Html.Raw(JsonSerializer.Serialize(Model.AvailableYears));
+        var fiscalYears = @Html.Raw(JsonSerializer.Serialize(Model.AvailableFiscalYears));
+        var curYear = @Model.Year;
+
+        function fillYears() {
+            var list = (type.value === 'fiscal' ? fiscalYears : annualYears).slice();
+            if (list.length === 0) list = [curYear];
+            yearSel.innerHTML = '';
+            list.forEach(function (y) {
+                var o = document.createElement('option');
+                o.value = y; o.textContent = (y + 543);
+                if (y === curYear) o.selected = true;
+                yearSel.appendChild(o);
+            });
+        }
+        function sync() {
+            var monthly = type.value === 'monthly';
+            monthWrap.style.display = monthly ? '' : 'none';
+            yearWrap.style.display = monthly ? 'none' : '';
+            periodSel.disabled = !monthly;
+            yearSel.disabled = monthly;
+            yearLabel.textContent = type.value === 'fiscal' ? 'ปีงบประมาณ (พ.ศ.)' : 'ปี (พ.ศ.)';
+            fillYears();
+        }
+        type.addEventListener('change', sync);
+        sync();
+    })();
+</script>

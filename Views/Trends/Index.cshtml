@@ -1,0 +1,232 @@
+﻿@{
+    ViewData["Title"] = "แนวโน้มโรคและความเสี่ยง";
+}
+
+<style>
+    :root {
+        --text-main: #1E293B;
+        --text-muted: #64748B;
+        --border-light: #E2E8F0;
+        --bg-surface: #FFFFFF;
+    }
+
+    .section-card {
+        background: var(--bg-surface);
+        border-radius: 16px;
+        border: 1px solid var(--border-light);
+        padding: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,.05);
+        height: 100%;
+    }
+
+    .section-title {
+        font-size: .95rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--border-light);
+        padding-bottom: 10px;
+    }
+
+    .chart-box {
+        position: relative;
+        width: 100%;
+        height: 280px;
+    }
+
+        .chart-box canvas {
+            max-width: 100%;
+        }
+
+    .section-card .table-responsive {
+        overflow-y: auto;
+    }
+
+    .section-card .table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #F8FAFC;
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+    @@media (max-width:991.98px) {
+        .section-card
+
+    {
+        padding: 1rem;
+    }
+
+    .chart-box {
+        height: 220px;
+    }
+
+    }
+    @@media (max-width:575.98px) {
+        .chart-box
+
+    {
+        height: 200px;
+    }
+
+    }
+</style>
+
+<div class="dashboard-wrapper">
+    <!-- ================= 5. Disease Trend Analytics (วิเคราะห์แนวโน้มโรค) ================= -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-5">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-bar-chart-fill text-danger"></i> อันดับโรคเสี่ยงสูงสุด (Top Diseases)</div>
+                <div class="chart-box">
+                    <canvas id="topDiseaseChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-activity text-danger"></i> แนวโน้มการเกิดโรครายเดือน (Disease Trends)</div>
+                <div class="chart-box">
+                    <canvas id="diseaseTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-5">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-pie-chart-fill text-danger"></i> กระจายความเสี่ยงตามแผนก (Department Risk)</div>
+                <div class="chart-box">
+                    <canvas id="departmentRiskChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-list-ol text-danger"></i> รายละเอียดกลุ่มโรค (ตามปริมาณจ่ายยาสะสม)</div>
+                <div class="table-responsive" style="max-height:280px;">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>กลุ่มโรค (Related Disease)</th>
+                                <th class="text-end">จำนวนที่จ่าย</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var diseaseLabelsForTable = (ViewBag.TopDiseaseLabels as List<string>) ?? new List<string>();
+                                var diseaseDataForTable = (ViewBag.TopDiseaseData as List<int>) ?? new List<int>();
+                            }
+                            @if (diseaseLabelsForTable.Count == 0)
+                            {
+                                <tr><td colspan="2" class="text-center text-muted py-3">ยังไม่มีข้อมูลกลุ่มโรคที่เชื่อมโยงกับยา</td></tr>
+                            }
+                            else
+                            {
+                                for (int i = 0; i < diseaseLabelsForTable.Count; i++)
+                                {
+                                    <tr>
+                                        <td>@diseaseLabelsForTable[i]</td>
+                                        <td class="text-end fw-semibold">@String.Format("{0:N0}", diseaseDataForTable[i])</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // ===== Disease Trend Analytics: สีชุดใช้ร่วมกันระหว่างกราฟ =====
+        var diseaseColors = ['#DC2626', '#2563EB', '#059669', '#D97706', '#7C3AED', '#DB2777', '#0891B2', '#65A30D'];
+
+        // Chart.js Configuration - Bar Chart: อันดับโรคเสี่ยงสูงสุด
+        new Chart(document.getElementById('topDiseaseChart'), {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(Json.Serialize(ViewBag.TopDiseaseLabels ?? new List<string>())),
+                datasets: [{
+                    label: 'จำนวนที่จ่าย',
+                    data: @Html.Raw(Json.Serialize(ViewBag.TopDiseaseData ?? new List<int>())),
+                    backgroundColor: diseaseColors[0],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, grid: { color: '#F3F4F6' } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+
+        // Chart.js Configuration - Line Chart: แนวโน้มการเกิดโรครายเดือน
+        var diseaseTrendLabels = @Html.Raw(Json.Serialize(ViewBag.DiseaseTrendMonthLabels ?? new List<string>()));
+        var diseaseTrendSeriesRaw = @Html.Raw(Json.Serialize(ViewBag.DiseaseTrendSeries ?? new Dictionary<string, List<int>>()));
+        var diseaseTrendDatasets = Object.keys(diseaseTrendSeriesRaw).map(function (name, idx) {
+            var color = diseaseColors[idx % diseaseColors.length];
+            return {
+                label: name,
+                data: diseaseTrendSeriesRaw[name],
+                borderColor: color,
+                backgroundColor: color + '20',
+                fill: false,
+                tension: 0.3,
+                pointBackgroundColor: color
+            };
+        });
+
+        new Chart(document.getElementById('diseaseTrendChart'), {
+            type: 'line',
+            data: {
+                labels: diseaseTrendLabels,
+                datasets: diseaseTrendDatasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#F3F4F6' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // Chart.js Configuration - Donut Chart: กระจายความเสี่ยงตามแผนก
+        new Chart(document.getElementById('departmentRiskChart'), {
+            type: 'doughnut',
+            data: {
+                labels: @Html.Raw(Json.Serialize(ViewBag.DepartmentRiskLabels ?? new List<string>())),
+                datasets: [{
+                    data: @Html.Raw(Json.Serialize(ViewBag.DepartmentRiskData ?? new List<int>())),
+                    backgroundColor: diseaseColors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
+                }
+            }
+        });
+    });
+</script>

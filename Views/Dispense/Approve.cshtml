@@ -223,14 +223,20 @@
                                         <tr class="item-row">
                                             <td class="fw-bold" style="color: var(--color-primary);">
                                                 @detail.Medicine?.Medicine_name
+                                                <!-- ส่ง ID รายการยาไป -->
                                                 <input type="hidden" name="keepDetailIds" value="@detail.Dispense_detail_id" class="keep-id-input" />
                                             </td>
-                                            <td class="text-center fw-bold fs-6">@qty</td>
+                                            <td class="text-center">
+                                                <!-- เปลี่ยนเป็น Input ให้แก้ไขได้ และรับค่าด้วย name="quantities" -->
+                                                <input type="number" name="quantities" class="form-control text-center mx-auto"
+                                                       style="width: 90px;" value="@qty" min="1"
+                                                       onchange="updateRowTotal(this, @price, '@item.Dispense_id')" />
+                                            </td>
                                             <td class="text-end">@price.ToString("N2")</td>
                                             <td class="text-end row-total fw-semibold" data-value="@rowTotal">@rowTotal.ToString("N2")</td>
                                             <td class="text-center">
                                                 <button type="button" class="btn btn-remove-item" onclick="removeRow(this, '@item.Dispense_id')">
-                                                    <i class="bi bi-trash3 me-1"></i> ไม่อนุมัติรายการนี้
+                                                    <i class="bi bi-trash3 me-1"></i> ไม่อนุมัติ
                                                 </button>
                                             </td>
                                         </tr>
@@ -269,26 +275,46 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
 <script>
+    // คำนวณราคาย่อยแต่ละแถวเมื่อมีการเปลี่ยนตัวเลข
+    function updateRowTotal(input, price, dispenseId) {
+        let newQty = parseInt(input.value);
+        if (isNaN(newQty) || newQty < 1) {
+            newQty = 1;
+            input.value = 1;
+        }
+
+        let rowTotal = newQty * price;
+        let row = input.closest('tr');
+        let rowTotalEl = row.querySelector('.row-total');
+
+        rowTotalEl.setAttribute('data-value', rowTotal);
+        rowTotalEl.innerText = rowTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        updateGrandTotal(dispenseId);
+    }
+
+    // คำนวณราคารวมสุทธิของใบเบิก
+    function updateGrandTotal(dispenseId) {
+        const table = document.getElementById('table-' + dispenseId);
+        let newTotal = 0;
+        table.querySelectorAll('.row-total').forEach(el => {
+            const val = parseFloat(el.getAttribute('data-value'));
+            if (!isNaN(val)) newTotal += val;
+        });
+        table.querySelector('.grand-total').innerText = newTotal.toLocaleString('en-US', {
+            minimumFractionDigits: 2, maximumFractionDigits: 2
+        });
+    }
+
+    // ลบแถว
     function removeRow(btn, dispenseId) {
         if (confirm('คุณต้องการไม่อนุมัติรายการยานี้ใช่หรือไม่?')) {
             const row = btn.closest('.item-row');
             const table = document.getElementById('table-' + dispenseId);
 
-            row.remove(); // ลบแถวออกจากหน้าเว็บ
+            row.remove();
+            updateGrandTotal(dispenseId); // อัปเดตราคารวมหลังลบ
 
-            // คำนวณราคาสุทธิใหม่
-            let newTotal = 0;
-            table.querySelectorAll('.row-total').forEach(el => {
-                const val = parseFloat(el.getAttribute('data-value'));
-                if (!isNaN(val)) newTotal += val;
-            });
-
-            table.querySelector('.grand-total').innerText = newTotal.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-
-            // ดักเงื่อนไขถ้าลบยาจนเกลี้ยงการ์ดใบเบิก
             const remainingRows = table.querySelectorAll('.item-row').length;
             if (remainingRows === 0) {
                 alert('เนื่องจากไม่เหลือรายการยาในใบเบิกนี้แล้ว ระบบจะทำการเปลี่ยนเป็น "ปฏิเสธคำขอเบิกทั้งใบ" ให้ทันทีครับ');
@@ -297,6 +323,7 @@
         }
     }
 
+    // ปฏิเสธทั้งหมด
     function submitReject(dispenseId) {
         if (confirm('ยืนยันที่จะปฏิเสธและยกเลิกคำขอใบเบิกเลขที่ ' + dispenseId + ' ทั้งใบใช่หรือไม่?')) {
             document.getElementById('form-reject-' + dispenseId).submit();

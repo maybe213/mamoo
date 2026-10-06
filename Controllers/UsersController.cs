@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc.Rendering; // 🆕 เพิ่มเพื่อใช้งาน SelectList
+using Microsoft.AspNetCore.Http;
 
 namespace DrugInventoryPro.Controllers
 {
@@ -69,6 +70,13 @@ namespace DrugInventoryPro.Controllers
         public IActionResult Create(User u)
         {
             ModelState.Remove("User_id");
+
+            // 🛡️ ชื่อผู้ใช้ต้องไม่ซ้ำ (ใช้ล็อกอิน)
+            if (!string.IsNullOrWhiteSpace(u.Username) &&
+                _context.Users != null && _context.Users.Any(x => x.Username == u.Username))
+            {
+                ModelState.AddModelError("Username", "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว");
+            }
 
             var thaiRegex = new Regex(@"^[ก-๙\s]+$");
 
@@ -179,12 +187,27 @@ namespace DrugInventoryPro.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Edit(User u)
         {
+            // 🛡️ ชื่อผู้ใช้ต้องไม่ซ้ำกับคนอื่น
+            if (!string.IsNullOrWhiteSpace(u.Username) &&
+                _context.Users != null && _context.Users.Any(x => x.Username == u.Username && x.User_id != u.User_id))
+            {
+                ModelState.AddModelError("Username", "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว");
+            }
+
             if (ModelState.IsValid)
             {
                 u.Firstname = u.Firstname?.Trim();
                 u.Lastname = u.Lastname?.Trim();
 
-                _context.Users?.Update(u);
+                var existing = _context.Users?.Find(u.User_id);
+                if (existing == null) return NotFound();
+
+                // 🛡️ ถ้าไม่ได้กรอกรหัสผ่านใหม่ ให้คงรหัสผ่านเดิมไว้ (กันถูกเขียนทับเป็นค่าว่าง)
+                var oldPassword = existing.Password;
+                _context.Entry(existing).CurrentValues.SetValues(u);
+                if (string.IsNullOrWhiteSpace(u.Password))
+                    existing.Password = oldPassword;
+
                 _context.SaveChanges();
                 return RedirectToAction("Index");
             }
@@ -201,6 +224,14 @@ namespace DrugInventoryPro.Controllers
 
             var user = _context.Users.Find(id);
             if (user == null) return NotFound();
+
+            // 🛡️ ห้ามลบบัญชีของตัวเองที่กำลังล็อกอินอยู่
+            if (!string.IsNullOrEmpty(user.Username) &&
+                user.Username == HttpContext.Session.GetString("Username"))
+            {
+                TempData["ErrorMessage"] = "ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่ได้";
+                return RedirectToAction("Index");
+            }
 
             try
             {

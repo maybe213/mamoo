@@ -48,6 +48,10 @@ namespace DrugInventoryPro.Models
         [Column("SafetyStock")]
         public int? SafetyStock { get; set; }
 
+        // จุดสั่งซื้อ (ROP) ที่เภสัชกรกำหนดเอง; NULL = ใช้ค่าที่ระบบคำนวณอัตโนมัติ
+        [Column("ManualReorderPoint")]
+        public int? ManualReorderPoint { get; set; }
+
         //  แมปความสัมพันธ์เข้าหาฟิลด์ Unit_id โดยตรง ถูกต้องสมบูรณ์แล้วครับ
         [ForeignKey(nameof(Unit_id))]
         public virtual MedicineUnit? MedicineUnit { get; set; }

@@ -162,14 +162,14 @@
     <ul class="nav nav-tabs nav-tabs-custom" id="inventoryTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active d-flex align-items-center gap-2" id="medicines-tab" data-bs-toggle="tab" data-bs-target="#medicines-pane" type="button" role="tab">
-                
+
                 <span>รายการยา</span>
                 <span class="tab-badge">@(medicines?.Count() ?? 0)</span>
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link d-flex align-items-center gap-2" id="supplies-tab" data-bs-toggle="tab" data-bs-target="#supplies-pane" type="button" role="tab">
-                
+
                 <span>รายการเวชภัณฑ์</span>
                 <span class="tab-badge">@(supplies?.Count() ?? 0)</span>
             </button>
@@ -237,19 +237,34 @@
                                 <td class="text-center">
                                     @if (item.Expired_at.HasValue)
                                     {
-                                        var isExpired = item.Expired_at.Value.Date <= DateTime.Today;
-                                        var isExpiringSoon = !isExpired && item.Expired_at.Value.Date <= DateTime.Today.AddDays(30);
+                                        var expDate = item.Expired_at.Value.Date;
+                                        var isExpired = expDate < DateTime.Today;
+                                        var isRedAlert = !isExpired && expDate <= DateTime.Today.AddMonths(1);
+                                        var isYellowAlert = !isExpired && !isRedAlert && expDate <= DateTime.Today.AddMonths(3);
+                                        var isGreenAlert = !isExpired && !isRedAlert && !isYellowAlert && expDate <= DateTime.Today.AddMonths(6);
 
                                         if (isExpired)
                                         {
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 rounded-2">
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 rounded-2" data-bs-toggle="tooltip" data-bs-placement="top" title="หมดอายุแล้ว ห้ามจ่ายยา">
                                                 <i class="bi bi-calendar-x me-1"></i>@item.Expired_at.Value.ToString("dd/MM/yyyy")
                                             </span>
                                         }
-                                        else if (isExpiringSoon)
+                                        else if (isRedAlert)
                                         {
-                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1 rounded-2 fw-semibold">
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 rounded-2" data-bs-toggle="tooltip" data-bs-placement="top" title="หมดอายุในอีก 1 เดือน ควรปิดใช้งาน งดจ่าย">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>@item.Expired_at.Value.ToString("dd/MM/yyyy")
+                                            </span>
+                                        }
+                                        else if (isYellowAlert)
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1 rounded-2 fw-semibold" data-bs-toggle="tooltip" data-bs-placement="top" title="หมดอายุในอีก 3 เดือน">
                                                 <i class="bi bi-exclamation-circle me-1"></i>@item.Expired_at.Value.ToString("dd/MM/yyyy")
+                                            </span>
+                                        }
+                                        else if (isGreenAlert)
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-2 fw-semibold" data-bs-toggle="tooltip" data-bs-placement="top" title="หมดอายุในอีก 6 เดือน">
+                                                <i class="bi bi-info-circle me-1"></i>@item.Expired_at.Value.ToString("dd/MM/yyyy")
                                             </span>
                                         }
                                         else
@@ -364,5 +379,11 @@
         });
 
         sortItems();
+
+        // 🔹 เปิดใช้งาน tooltip ของ Bootstrap สำหรับ badge แจ้งเตือนวันหมดอายุ
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function (el) {
+            new bootstrap.Tooltip(el);
+        });
     });
 </script>

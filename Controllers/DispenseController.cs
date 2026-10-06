@@ -174,6 +174,22 @@ namespace DrugInventoryPro.Controllers
                 return RedirectToAction("Create");
             }
 
+            // ===== นโยบายงดจ่าย: ห้ามสร้างคำขอเบิกยาที่หมดอายุแล้ว หรือใกล้หมดอายุภายใน 1 เดือน =====
+            var oneMonthLimitForRequest = DateTime.Today.AddMonths(1);
+            var blockedOnRequest = await _context.Medicines
+                .Where(m => MedicineIds.Contains(m.Medicine_id)
+                            && m.Expired_at.HasValue
+                            && m.Expired_at.Value.Date <= oneMonthLimitForRequest)
+                .Select(m => m.Medicine_name)
+                .ToListAsync();
+
+            if (blockedOnRequest.Count > 0)
+            {
+                TempData["Error"] = "ไม่สามารถเบิกรายการต่อไปนี้ได้ เนื่องจากหมดอายุแล้วหรือใกล้หมดอายุภายใน 1 เดือน (นโยบายงดจ่าย): "
+                    + string.Join(", ", blockedOnRequest.Select(n => n ?? "(ไม่ระบุชื่อ)"));
+                return RedirectToAction("Create");
+            }
+
             var strategy = _context.Database.CreateExecutionStrategy();
 
             await strategy.ExecuteAsync(async () =>
@@ -281,9 +297,10 @@ namespace DrugInventoryPro.Controllers
         }
 
         // กดยืนยันอนุมัติและหักสต็อก
+        // กดยืนยันอนุมัติและหักสต็อก
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ConfirmApprove(string dispenseId, string[] keepDetailIds)
+        public async Task<IActionResult> ConfirmApprove(string dispenseId, string[] keepDetailIds, int[] quantities)
         {
             var role = HttpContext.Session.GetString("Role");
 
@@ -295,6 +312,13 @@ namespace DrugInventoryPro.Controllers
 
             if (string.IsNullOrEmpty(dispenseId))
                 return NotFound();
+
+            // ป้องกันกรณีอาเรย์เก็บค่า ID กับ Quantity ส่งมาไม่เท่ากัน
+            if (keepDetailIds != null && quantities != null && keepDetailIds.Length != quantities.Length)
+            {
+                TempData["Error"] = "เกิดข้อผิดพลาด: ข้อมูลรายการยาและจำนวนไม่สอดคล้องกัน";
+                return RedirectToAction(nameof(Approve));
+            }
 
             var strategy = _context.Database.CreateExecutionStrategy();
 
@@ -311,28 +335,79 @@ namespace DrugInventoryPro.Controllers
                     if (dispense == null)
                         throw new Exception("ไม่พบข้อมูลใบเบิก");
 
-                    foreach (var detail in dispense.DispenseDetails.ToList())
+                    // ===== 1. จัดการรายการที่ถูก "ไม่อนุมัติ" และลบทิ้ง =====
+                    var keptIdList = keepDetailIds?.ToList() ?? new List<string>();
+
+                    var detailsToRemove = dispense.DispenseDetails
+                        .Where(d => !keptIdList.Contains(d.Dispense_detail_id.ToString()))
+                        .ToList();
+
+                    if (detailsToRemove.Any())
+                    {
+                        _context.RemoveRange(detailsToRemove);
+                    }
+
+                    // ===== 2. อัปเดต "จำนวนยาใหม่" ตามที่ผู้ใช้กรอกเข้ามา =====
+                    for (int i = 0; i < keptIdList.Count; i++)
+                    {
+                        var idToUpdate = keptIdList[i];
+                        var newQty = quantities[i]; // ดึงจำนวนใหม่
+
+                        var detail = dispense.DispenseDetails.FirstOrDefault(d => d.Dispense_detail_id.ToString() == idToUpdate);
+                        if (detail != null)
+                        {
+                            detail.Quantity_dispensed = newQty; // อัปเดตทับค่าเดิม
+                        }
+                    }
+
+                    // กรองเอาเฉพาะรายละเอียดรายการยาที่ยังเหลืออยู่ (ไม่โดนลบ)
+                    var keptDetails = dispense.DispenseDetails
+                        .Where(d => keptIdList.Contains(d.Dispense_detail_id.ToString()))
+                        .ToList();
+
+                    // ===== 3. นโยบายงดจ่าย: ตรวจสอบซ้ำก่อนอนุมัติจริง (เช็คเฉพาะตัวที่อนุมัติ) =====
+                    var oneMonthLimitForApprove = DateTime.Today.AddMonths(1);
+                    var blockedOnApprove = new List<string>();
+
+                    foreach (var detailCheck in keptDetails)
+                    {
+                        var medCheck = await _context.Medicines.FindAsync(detailCheck.Medicine_id);
+                        if (medCheck != null && medCheck.Expired_at.HasValue && medCheck.Expired_at.Value.Date <= oneMonthLimitForApprove)
+                        {
+                            blockedOnApprove.Add(medCheck.Medicine_name ?? detailCheck.Medicine_id ?? "(ไม่ระบุชื่อ)");
+                        }
+                    }
+
+                    if (blockedOnApprove.Count > 0)
+                    {
+                        throw new Exception("ไม่สามารถอนุมัติจ่ายยาได้ เนื่องจากรายการต่อไปนี้หมดอายุแล้วหรือใกล้หมดอายุภายใน 1 เดือน (นโยบายงดจ่าย): "
+                            + string.Join(", ", blockedOnApprove.Distinct()));
+                    }
+
+                    // ===== 4. หักสต็อกยาตามจำนวนใหม่ที่แก้ไขแล้ว =====
+                    foreach (var detail in keptDetails)
                     {
                         var med = await _context.Medicines.FindAsync(detail.Medicine_id);
 
                         if (med != null)
                         {
-                            int qty = detail.Quantity_dispensed ?? 0;
+                            int qty = detail.Quantity_dispensed ?? 0; // ใช้ค่าจำนวนล่าสุดที่เพิ่งอัปเดตไป
 
                             if (med.Stock < qty)
-                                throw new Exception($"ยา {med.Medicine_name} ในคลังไม่พอ");
+                                throw new Exception($"ยา {med.Medicine_name} ในคลังไม่พอ (ต้องการเบิก {qty} แต่มีในคลัง {med.Stock})");
 
                             med.Stock -= qty;
                         }
                     }
 
+                    // 5. เปลี่ยนสถานะใบเบิกเป็น อนุมัติ
                     dispense.Status = "Approved";
 
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
                 });
 
-                TempData["Success"] = "อนุมัติใบเบิกเรียบร้อยแล้ว";
+                TempData["Success"] = "อนุมัติใบเบิกและหักสต็อกเรียบร้อยแล้ว";
             }
             catch (Exception ex)
             {
@@ -340,6 +415,62 @@ namespace DrugInventoryPro.Controllers
             }
 
             return RedirectToAction(nameof(Approve));
+        }
+
+        // 🆕 ยกเลิกใบเบิกที่ "อนุมัติแล้ว" และคืนสต็อกให้ครบทุกรายการ (ทำในทรานแซกชันเดียว)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelApproved(string id)
+        {
+            var role = HttpContext.Session.GetString("Role");
+            if (role != "Pharmacist")
+            {
+                TempData["Error"] = "คุณไม่มีสิทธิ์ยกเลิกใบเบิกยา";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (string.IsNullOrEmpty(id))
+                return NotFound();
+
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            try
+            {
+                await strategy.ExecuteAsync(async () =>
+                {
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+
+                    var dispense = await _context.Dispense
+                        .Include(d => d.DispenseDetails)
+                        .FirstOrDefaultAsync(d => d.Dispense_id == id);
+
+                    if (dispense == null)
+                        throw new Exception("ไม่พบข้อมูลใบเบิก");
+
+                    if (dispense.Status != "Approved")
+                        throw new Exception("ยกเลิกได้เฉพาะใบเบิกที่อนุมัติแล้วเท่านั้น");
+
+                    foreach (var detail in dispense.DispenseDetails)
+                    {
+                        var med = await _context.Medicines.FindAsync(detail.Medicine_id);
+                        if (med != null)
+                            med.Stock = (med.Stock ?? 0) + (detail.Quantity_dispensed ?? 0);
+                    }
+
+                    dispense.Status = "Cancelled";
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                });
+
+                TempData["Success"] = $"ยกเลิกใบเบิกเลขที่ {id} และคืนสต็อกเรียบร้อยแล้ว";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+
+            return RedirectToAction(nameof(History));
         }
 
         [HttpPost]
@@ -364,6 +495,13 @@ namespace DrugInventoryPro.Controllers
                 if (dispense == null)
                 {
                     TempData["Error"] = "ไม่พบข้อมูลใบเบิก";
+                    return RedirectToAction(nameof(Approve));
+                }
+
+                // 🛡️ ปฏิเสธได้เฉพาะใบที่ยังรออนุมัติ (ใบที่อนุมัติแล้วถูกหักสต็อกไปแล้ว ต้องใช้ "ยกเลิกใบเบิก" เพื่อคืนสต็อก)
+                if (dispense.Status != "Pending")
+                {
+                    TempData["Error"] = "ปฏิเสธได้เฉพาะใบเบิกที่รออนุมัติ หากอนุมัติแล้วให้ใช้ปุ่มยกเลิกใบเบิกเพื่อคืนสต็อก";
                     return RedirectToAction(nameof(Approve));
                 }
 

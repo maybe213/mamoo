@@ -210,7 +210,11 @@ namespace DrugInventoryPro.Controllers
 
                 // คำนวณ ROP = (AvgDailyUsage * LeadTime) + SafetyStock
                 int leadTimeDemand = (int)Math.Ceiling(avgDailyUsage * defaultLeadTimeDays);
-                int rop = leadTimeDemand + safetyStock;
+                int autoRop = leadTimeDemand + safetyStock;
+
+                // 🆕 ถ้าเภสัชกรกำหนดจุดสั่งซื้อเอง (ManualReorderPoint) ให้ใช้ค่านั้นแทนค่าอัตโนมัติ
+                bool isManualRop = med.ManualReorderPoint.HasValue;
+                int rop = isManualRop ? med.ManualReorderPoint.Value : autoRop;
 
                 // คำนวณ ROQ (ปริมาณแนะนำสั่งซื้อ)
                 int maxStockLevel = Math.Max(rop * 2, safetyStock * 2);
@@ -220,8 +224,13 @@ namespace DrugInventoryPro.Controllers
                 // ตรวจสอบสถานะ
                 bool isCritical = currentStock <= safetyStock || currentStock == 0;
                 bool isReorder = currentStock <= rop;
-                bool isExpired = med.Expired_at.HasValue && med.Expired_at.Value.Date <= today;
-                bool isExpiringSoon = med.Expired_at.HasValue && med.Expired_at.Value.Date > today && med.Expired_at.Value.Date <= today.AddDays(30);
+                bool isExpired = med.Expired_at.HasValue && med.Expired_at.Value.Date < today;
+
+                // เกณฑ์เตือนวันหมดอายุ 3 ระดับ: แดง ≤1 เดือน / เหลือง ≤3 เดือน / เขียว ≤6 เดือน
+                bool isExpiringWithin1Month = !isExpired && med.Expired_at.HasValue && med.Expired_at.Value.Date <= today.AddMonths(1);
+                bool isExpiringWithin3Months = !isExpired && med.Expired_at.HasValue && med.Expired_at.Value.Date <= today.AddMonths(3);
+                bool isExpiringWithin6Months = !isExpired && med.Expired_at.HasValue && med.Expired_at.Value.Date <= today.AddMonths(6);
+                bool isExpiringSoon = isExpiringWithin6Months; // รวม 3 ระดับ ไว้ใช้กับตัวกรองเดิม
 
                 // 🎯 กรองเฉพาะยาที่สต็อกต่ำกว่า ROP, Safety Stock หรือสต็อกหมด (0)
                 if (isReorder || isCritical)
@@ -234,11 +243,16 @@ namespace DrugInventoryPro.Controllers
                         AvgDailyUsage = Math.Round(avgDailyUsage, 2),
                         LeadTimeDays = defaultLeadTimeDays,
                         ReorderPoint = rop,
+                        AutoReorderPoint = autoRop,
+                        IsManualRop = isManualRop,
                         SuggestedROQ = suggestedROQ,
                         IsCritical = isCritical,
                         IsReorder = isReorder,
                         IsExpired = isExpired,
-                        IsExpiringSoon = isExpiringSoon
+                        IsExpiringSoon = isExpiringSoon,
+                        IsExpiringWithin1Month = isExpiringWithin1Month,
+                        IsExpiringWithin3Months = isExpiringWithin3Months,
+                        IsExpiringWithin6Months = isExpiringWithin6Months
                     });
                 }
             }
@@ -317,12 +331,12 @@ namespace DrugInventoryPro.Controllers
             return View("Catalog");
         }
 
-        // 3. ใกล้หมดอายุ 30 วัน (/Medicines/ExpiringSoon)
+        // 3. ใกล้หมดอายุ (/Medicines/ExpiringSoon) — ครอบคลุมเกณฑ์เตือน 3 ระดับ: ภายใน 6 เดือน (แดง ≤1 / เหลือง ≤3 / เขียว ≤6)
         [HttpGet]
         public async Task<IActionResult> ExpiringSoon()
         {
             var today = DateTime.Today;
-            var next30Days = today.AddDays(30);
+            var sixMonthsFromNow = today.AddMonths(6);
 
             var expiringItems = await _context.Medicines
                 .AsNoTracking()
@@ -331,12 +345,12 @@ namespace DrugInventoryPro.Controllers
                 .Where(m => m.Status == "Active" &&
                             m.Expired_at.HasValue &&
                             m.Expired_at.Value.Date > today &&
-                            m.Expired_at.Value.Date <= next30Days)
+                            m.Expired_at.Value.Date <= sixMonthsFromNow)
                 .OrderBy(m => m.Expired_at)
                 .ToListAsync();
 
             PopulateCatalogViewBag(expiringItems);
-            ViewData["Title"] = "รายการยาและเวชภัณฑ์ใกล้หมดอายุ (ภายใน 30 วัน)";
+            ViewData["Title"] = "รายการยาและเวชภัณฑ์ใกล้หมดอายุ (ภายใน 6 เดือน)";
             return View("Catalog");
         }
 
@@ -363,6 +377,50 @@ namespace DrugInventoryPro.Controllers
             return View(alertList);
         }
 
+
+        // 🆕 กำหนดจุดสั่งซื้อ (ROP) เอง ทีละรายการ — ส่งค่าว่างเพื่อล้างและกลับไปใช้ค่าอัตโนมัติ
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetReorderPoint(string id, int? value)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return Json(new { success = false, message = "ไม่พบรหัสยา" });
+
+            if (value.HasValue && (value.Value < 0 || value.Value > 1000000))
+                return Json(new { success = false, message = "จุดสั่งซื้อต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป" });
+
+            var med = await _context.Medicines.FindAsync(id);
+            if (med == null)
+                return Json(new { success = false, message = "ไม่พบรายการยานี้" });
+
+            med.ManualReorderPoint = value;
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = value.HasValue ? "บันทึกจุดสั่งซื้อเรียบร้อย" : "ล้างค่าแล้ว กลับไปใช้ค่าอัตโนมัติ" });
+        }
+
+        // 🆕 กำหนดจุดสั่งซื้อ (ROP) พร้อมกันหลายรายการ (ค่าเดียวกันทั้งชุด)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkSetReorderPoint(List<string> ids, int? value)
+        {
+            if (ids == null || ids.Count == 0)
+                return Json(new { success = false, message = "ยังไม่ได้เลือกรายการ" });
+
+            if (value.HasValue && (value.Value < 0 || value.Value > 1000000))
+                return Json(new { success = false, message = "จุดสั่งซื้อต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป" });
+
+            var meds = await _context.Medicines.Where(m => ids.Contains(m.Medicine_id)).ToListAsync();
+            foreach (var m in meds) m.ManualReorderPoint = value;
+            await _context.SaveChangesAsync();
+
+            return Json(new
+            {
+                success = true,
+                count = meds.Count,
+                message = value.HasValue ? $"กำหนดจุดสั่งซื้อให้ {meds.Count} รายการเรียบร้อย" : $"ล้างค่ากำหนดเอง {meds.Count} รายการแล้ว"
+            });
+        }
 
         // INDEX
         [HttpGet]

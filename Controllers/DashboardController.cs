@@ -69,7 +69,11 @@ namespace DrugInventoryPro.Controllers
 
                 // คำนวณ ROP = (AvgDailyUsage * LeadTime) + SafetyStock
                 int leadTimeDemand = (int)Math.Ceiling(avgDailyUsage * defaultLeadTimeDays);
-                int rop = leadTimeDemand + safetyStock;
+                int autoRop = leadTimeDemand + safetyStock;
+
+                // 🆕 ถ้าเภสัชกรกำหนดจุดสั่งซื้อเอง (ManualReorderPoint) ให้ใช้ค่านั้นแทนค่าอัตโนมัติ
+                bool isManualRop = med.ManualReorderPoint.HasValue;
+                int rop = isManualRop ? med.ManualReorderPoint.Value : autoRop;
 
                 // คำนวณ ROQ (ปริมาณแนะนำสั่งซื้อ)
                 int maxStockLevel = Math.Max(rop * 2, safetyStock * 2);
@@ -79,8 +83,13 @@ namespace DrugInventoryPro.Controllers
                 // ตรวจสอบสถานะ
                 bool isCritical = currentStock <= safetyStock || currentStock == 0;
                 bool isReorder = currentStock <= rop;
-                bool isExpired = med.Expired_at.HasValue && med.Expired_at.Value.Date <= today;
-                bool isExpiringSoon = med.Expired_at.HasValue && med.Expired_at.Value.Date > today && med.Expired_at.Value.Date <= today.AddDays(30);
+                bool isExpired = med.Expired_at.HasValue && med.Expired_at.Value.Date < today;
+
+                // เกณฑ์เตือนวันหมดอายุ 3 ระดับ: แดง ≤1 เดือน / เหลือง ≤3 เดือน / เขียว ≤6 เดือน
+                bool isExpiringWithin1Month = !isExpired && med.Expired_at.HasValue && med.Expired_at.Value.Date <= today.AddMonths(1);
+                bool isExpiringWithin3Months = !isExpired && med.Expired_at.HasValue && med.Expired_at.Value.Date <= today.AddMonths(3);
+                bool isExpiringWithin6Months = !isExpired && med.Expired_at.HasValue && med.Expired_at.Value.Date <= today.AddMonths(6);
+                bool isExpiringSoon = isExpiringWithin6Months; // รวม 3 ระดับ ไว้ใช้กับตัวกรองเดิม
 
                 // กรองเฉพาะรายการที่ต้องแจ้งเตือน
                 if (isReorder || isCritical)
@@ -93,11 +102,16 @@ namespace DrugInventoryPro.Controllers
                         AvgDailyUsage = Math.Round(avgDailyUsage, 2),
                         LeadTimeDays = defaultLeadTimeDays,
                         ReorderPoint = rop,
+                        AutoReorderPoint = autoRop,
+                        IsManualRop = isManualRop,
                         SuggestedROQ = suggestedROQ,
                         IsCritical = isCritical,
                         IsReorder = isReorder,
                         IsExpired = isExpired,
-                        IsExpiringSoon = isExpiringSoon
+                        IsExpiringSoon = isExpiringSoon,
+                        IsExpiringWithin1Month = isExpiringWithin1Month,
+                        IsExpiringWithin3Months = isExpiringWithin3Months,
+                        IsExpiringWithin6Months = isExpiringWithin6Months
                     });
                 }
             }
@@ -140,23 +154,77 @@ namespace DrugInventoryPro.Controllers
             // ส่งจำนวนรายการจริงไปแสดงบน Card (ตัวเลขตรงกันกับหน้า LowStock)
             ViewBag.LowStockCount = lowStockViewModels.Count;
 
-            // รวมวันที่มียาหมดอายุเพื่อส่งไปแสดงบนปฏิทิน
+            // ==========================================
+            // เกณฑ์เตือนวันหมดอายุ 3 ระดับ สำหรับปฏิทิน (เหมือนหน้า Stock Alert / Dispense)
+            // แดง ≤ 1 เดือน, เหลือง ≤ 3 เดือน, เขียว ≤ 6 เดือน
+            // ==========================================
+            var oneMonthFromNow = today.AddMonths(1);
+            var threeMonthsFromNow = today.AddMonths(3);
+            var sixMonthsFromNow = today.AddMonths(6);
+
+            string GetExpiryLevel(DateTime expDate)
+            {
+                if (expDate < today) return "expired";
+                if (expDate <= oneMonthFromNow) return "red";
+                if (expDate <= threeMonthsFromNow) return "yellow";
+                if (expDate <= sixMonthsFromNow) return "green";
+                return "normal";
+            }
+
+            string GetExpiryTooltip(DateTime expDate, string level)
+            {
+                return level switch
+                {
+                    "expired" => "หมดอายุแล้ว ห้ามจ่ายยา",
+                    "red" => "หมดอายุในอีก 1 เดือน ควรปิดใช้งาน งดจ่าย",
+                    "yellow" => "หมดอายุในอีก 3 เดือน",
+                    "green" => "หมดอายุในอีก 6 เดือน",
+                    _ => "สถานะปกติ"
+                };
+            }
+
+            // รวมวันที่มียาหมดอายุเพื่อส่งไปแสดงบนปฏิทิน (คงไว้เพื่อความเข้ากันได้กับปฏิทินเดิม)
             ViewBag.ExpiredDatesJson = allMedicines
                 .Where(m => m.Expired_at.HasValue)
                 .Select(m => m.Expired_at.Value.ToString("yyyy-MM-dd"))
                 .Distinct()
                 .ToList();
 
-            // ส่งข้อมูลรายละเอียดรายการยาหมดอายุสำหรับแสดง Modal
+            // 🔹 แยกวันที่ตามระดับสี ให้ปฏิทินนำไปวาดสีจุด/แถบได้ตรง ๆ (แดง/เหลือง/เขียว/หมดอายุแล้ว)
+            var medicinesWithExpiry = allMedicines.Where(m => m.Expired_at.HasValue).ToList();
+
+            ViewBag.RedAlertDatesJson = medicinesWithExpiry
+                .Where(m => GetExpiryLevel(m.Expired_at!.Value.Date) == "red")
+                .Select(m => m.Expired_at!.Value.ToString("yyyy-MM-dd"))
+                .Distinct().ToList();
+
+            ViewBag.YellowAlertDatesJson = medicinesWithExpiry
+                .Where(m => GetExpiryLevel(m.Expired_at!.Value.Date) == "yellow")
+                .Select(m => m.Expired_at!.Value.ToString("yyyy-MM-dd"))
+                .Distinct().ToList();
+
+            ViewBag.GreenAlertDatesJson = medicinesWithExpiry
+                .Where(m => GetExpiryLevel(m.Expired_at!.Value.Date) == "green")
+                .Select(m => m.Expired_at!.Value.ToString("yyyy-MM-dd"))
+                .Distinct().ToList();
+
+            // ส่งข้อมูลรายละเอียดรายการยาหมดอายุสำหรับแสดง Modal (พร้อมระดับสีและข้อความ tooltip)
             ViewBag.ExpiringMedicineDetails = allMedicines
                 .Where(m => m.Expired_at.HasValue)
-                .Select(m => new
+                .Select(m =>
                 {
-                    name = m.Medicine_name ?? "ไม่ระบุชื่อ",
-                    dateStr = m.Expired_at.Value.ToString("yyyy-MM-dd"),
-                    isExpired = m.Expired_at.Value.Date < today,
-                    stock = m.Stock ?? 0,
-                    unit = m.MedicineUnit?.Unit_name ?? "ชิ้น"
+                    var expDate = m.Expired_at!.Value.Date;
+                    var level = GetExpiryLevel(expDate);
+                    return new
+                    {
+                        name = m.Medicine_name ?? "ไม่ระบุชื่อ",
+                        dateStr = expDate.ToString("yyyy-MM-dd"),
+                        isExpired = level == "expired",
+                        level = level, // "expired" | "red" | "yellow" | "green" | "normal"
+                        tooltip = GetExpiryTooltip(expDate, level),
+                        stock = m.Stock ?? 0,
+                        unit = m.MedicineUnit?.Unit_name ?? "ชิ้น"
+                    };
                 })
                 .ToList();
 
@@ -266,91 +334,12 @@ namespace DrugInventoryPro.Controllers
                 monthlyUsageData.Add(monthCount);
             }
             ViewBag.MonthlyUsage = monthlyUsageData;
-            // ==========================================
-            //  วิเคราะห์แนวโน้มโรค (ย้อนหลัง 6 เดือน เฉพาะใบเบิกที่อนุมัติแล้ว)
-            // ==========================================
-            var trendStart = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
-
-            var rawDiseaseRows = await _context.DispenseDetails
-                .AsNoTracking()
-                .Where(dd => dd.Dispense != null &&
-                             dd.Dispense.Status == "Approved" &&
-                             dd.Dispense.Dispense_date.HasValue &&
-                             dd.Dispense.Dispense_date.Value >= trendStart)
-                .Select(dd => new
-                {
-                    RelatedDisease = dd.Medicine.Category.Related_disease,   // ✅ ใช้ related_disease แทน category_name
-                    Dept = dd.Dispense.Departments.Department_name ?? "ไม่ระบุแผนก",
-                    Date = dd.Dispense.Dispense_date.Value,
-                    Qty = dd.Quantity_dispensed ?? 0
-                })
-                .ToListAsync();
-
-            // ⚠️ related_disease อาจมีหลายโรคคั่นด้วยจุลภาค (เช่น "ไข้หวัด, ท้องเสีย, ท้องอืด")
-            // จึงต้อง "แตก" แต่ละแถวออกเป็นรายโรค ก่อนนำไป Group เพื่อให้แสดงชื่อโรคจริง ไม่ใช่กลุ่มยาว
-            var diseaseRows = rawDiseaseRows
-                .SelectMany(x =>
-                {
-                    var names = string.IsNullOrWhiteSpace(x.RelatedDisease)
-                        ? new[] { "ไม่ระบุโรค" }
-                        : x.RelatedDisease.Split(',')
-                            .Select(n => n.Trim())
-                            .Where(n => !string.IsNullOrEmpty(n))
-                            .ToArray();
-
-                    return names.Select(name => new
-                    {
-                        Group = name,
-                        Dept = x.Dept,
-                        Date = x.Date,
-                        Qty = x.Qty
-                    });
-                })
-                .ToList();
-
-            // 1) Top Diseases + ตารางรายละเอียด
-            var topDiseases = diseaseRows
-                .GroupBy(x => x.Group)
-                .Select(g => new { Name = g.Key, Total = g.Sum(x => x.Qty) })
-                .OrderByDescending(x => x.Total)
-                .Take(8)
-                .ToList();
-
-            ViewBag.TopDiseaseLabels = topDiseases.Select(x => x.Name).ToList();
-            ViewBag.TopDiseaseData = topDiseases.Select(x => x.Total).ToList();
-
-            // 2) Disease Trends (5 โรคแรก x 6 เดือน)
-            var thCulture = new System.Globalization.CultureInfo("th-TH");
-            var months = Enumerable.Range(0, 6).Select(i => trendStart.AddMonths(i)).ToList();
-            ViewBag.DiseaseTrendMonthLabels = months.Select(m => m.ToString("MMM yy", thCulture)).ToList();
-
-            var trendSeries = new Dictionary<string, List<int>>();
-            foreach (var name in topDiseases.Take(5).Select(x => x.Name))
-            {
-                trendSeries[name] = months
-                    .Select(m => diseaseRows
-                        .Where(x => x.Group == name && x.Date.Year == m.Year && x.Date.Month == m.Month)
-                        .Sum(x => x.Qty))
-                    .ToList();
-            }
-            ViewBag.DiseaseTrendSeries = trendSeries;
-
-            // 3) Department Risk
-            var deptRisk = diseaseRows
-                .GroupBy(x => x.Dept)
-                .Select(g => new { Name = g.Key, Total = g.Sum(x => x.Qty) })
-                .OrderByDescending(x => x.Total)
-                .Take(8)
-                .ToList();
-
-            ViewBag.DepartmentRiskLabels = deptRisk.Select(x => x.Name).ToList();
-            ViewBag.DepartmentRiskData = deptRisk.Select(x => x.Total).ToList();
             return View();
         }
-           // =========================================
-           // Export Excel รายงาน บัญชีรับ-จ่ายเวชภัณฑ์ (รบ 301)
-           // =========================================
-            [HttpGet]
+        // =========================================
+        // Export Excel รายงาน บัญชีรับ-จ่ายเวชภัณฑ์ (รบ 301)
+        // =========================================
+        [HttpGet]
         public async Task<IActionResult> ExportDrugstoreReport(DateTime? startDate, DateTime? endDate)
         {
             var start = startDate ?? new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
@@ -411,7 +400,7 @@ namespace DrugInventoryPro.Controllers
                 {
                     var totalReceived = receivesInRange.Where(r => r.Medicine_id == med.Medicine_id).Sum(r => (int?)r.Quantity_received ?? 0);
                     var totalDispensed = dispensesInRange.Where(d => d.Medicine_id == med.Medicine_id).Sum(d => (int?)d.Quantity_dispensed ?? 0);
-                    var price = med.Price ; // ใส่ Fallback ?? 0 ป้องกัน Null Reference
+                    var price = med.Price; // ใส่ Fallback ?? 0 ป้องกัน Null Reference
 
                     ws.Cell(currentRow, 1).Value = index++;
                     ws.Cell(currentRow, 2).Value = med.Medicine_name;
