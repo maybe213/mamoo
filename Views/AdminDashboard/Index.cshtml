@@ -1,0 +1,475 @@
+@model DrugInventoryPro.Models.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "หน้าแรกผู้ดูแลระบบ";
+    int totalRole = Math.Max(Model.ActiveUsers, 1);
+    int maxMembers = Model.Departments.Count == 0 ? 1 : Math.Max(1, Model.Departments.Max(x => x.MemberCount));
+    string RoleText(string? r) => r == "Admin" ? "ผู้ดูแลระบบ" : r == "Pharmacist" ? "เภสัชกร" : r == "Staff" ? "เจ้าหน้าที่" : (r ?? "-");
+    string RoleClass(string? r) => r == "Admin" ? "rl-admin" : r == "Pharmacist" ? "rl-pharma" : "rl-staff";
+}
+
+<style>
+    .ad-card {
+        background: #fff;
+        border: 1px solid #E2E8F0;
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,.05);
+        height: 100%;
+    }
+
+    .ad-stat .lbl {
+        font-size: .85rem;
+        color: #64748B;
+        font-weight: 600;
+    }
+
+    .ad-stat .val {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .ad-stat .sub {
+        font-size: .8rem;
+        color: #94A3B8;
+    }
+
+    .ad-title {
+        font-weight: 700;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .bar-row {
+        margin-bottom: 14px;
+    }
+
+        .bar-row .top {
+            display: flex;
+            justify-content: space-between;
+            font-size: .9rem;
+            margin-bottom: 4px;
+        }
+
+    .bar-track {
+        height: 10px;
+        background: #F1F5F9;
+        border-radius: 99px;
+        overflow: hidden;
+    }
+
+    .bar-fill {
+        height: 100%;
+        border-radius: 99px;
+    }
+    /* รายการแผนกแบบแถวแนวนอน */
+    .dept-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .dept-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 16px;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        background: #fff;
+        text-decoration: none;
+        color: #1E293B;
+        transition: .15s;
+    }
+
+        .dept-row:hover {
+            border-color: #93C5FD;
+            background: #F8FBFF;
+            transform: translateX(2px);
+            color: #1E293B;
+        }
+
+        .dept-row.active {
+            border-color: #0d6efd;
+            background: #EFF6FF;
+            box-shadow: inset 4px 0 0 #0d6efd;
+        }
+
+    .dept-ico {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: #ECFDF5;
+        color: #059669;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .dept-row.active .dept-ico {
+        background: #DBEAFE;
+        color: #2563EB;
+    }
+
+    .dept-name {
+        flex: 1 1 auto;
+        font-weight: 600;
+        min-width: 0;
+    }
+
+    .dept-bar {
+        flex: 0 0 150px;
+        height: 8px;
+        background: #F1F5F9;
+        border-radius: 99px;
+        overflow: hidden;
+    }
+
+        .dept-bar span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg,#60A5FA,#2563EB);
+            border-radius: 99px;
+        }
+
+    .dept-num {
+        flex: 0 0 70px;
+        text-align: right;
+        font-weight: 700;
+        color: #2563EB;
+        font-size: 1.1rem;
+    }
+
+        .dept-num small {
+            font-weight: 500;
+            color: #64748B;
+            font-size: .8rem;
+        }
+
+        .dept-num.zero {
+            color: #94A3B8;
+        }
+
+    .dept-go {
+        color: #CBD5E1;
+    }
+
+    .dept-row.none .dept-ico {
+        background: #F1F5F9;
+        color: #64748B;
+    }
+
+    .mini {
+        font-size: .78rem;
+        color: #64748B;
+    }
+
+    @@media (max-width:575.98px) {
+        .dept-bar {
+            display: none;
+        }
+    }
+    /* แถบสัดส่วนหน้าที่แบบยาวเต็มแนวนอน */
+    .role-stack {
+        display: flex;
+        gap: 3px;
+        height: 16px;
+        border-radius: 99px;
+        overflow: hidden;
+        background: #F1F5F9;
+        margin: 4px 0 18px;
+    }
+
+        .role-stack span {
+            display: block;
+            height: 100%;
+        }
+
+    .role-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 12px 16px;
+        height: 100%;
+        background: #fff;
+    }
+
+    .role-count {
+        font-size: 1.7rem;
+        font-weight: 700;
+        line-height: 1;
+        text-align: right;
+    }
+
+        .role-count small {
+            font-size: .8rem;
+            font-weight: 500;
+            color: #64748B;
+        }
+
+    .role-pct {
+        font-size: .75rem;
+        color: #94A3B8;
+        text-align: right;
+    }
+
+    .rl {
+        display: inline-block;
+        font-size: .75rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 99px;
+    }
+
+    .rl-admin {
+        background: #FEF2F2;
+        color: #DC2626;
+    }
+
+    .rl-pharma {
+        background: #F0FDF4;
+        color: #16A34A;
+    }
+
+    .rl-staff {
+        background: #EFF6FF;
+        color: #2563EB;
+    }
+
+    .mem-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .9rem;
+    }
+
+        .mem-table th {
+            background: #F8FAFC;
+            color: #64748B;
+            font-weight: 600;
+            padding: 10px 12px;
+            border-bottom: 1px solid #E2E8F0;
+            text-align: left;
+        }
+
+        .mem-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #F1F5F9;
+        }
+</style>
+
+<div class="container-fluid px-4 py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h4 class="fw-bold m-0"><i class="bi bi-speedometer2 text-primary me-2"></i>ภาพรวมผู้ใช้งานและแผนก</h4>
+        <div class="d-flex gap-2">
+            <a asp-controller="Users" asp-action="Index" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> จัดการผู้ใช้งาน</a>
+            <a asp-controller="Departments" asp-action="Index" class="btn btn-outline-primary btn-sm"><i class="bi bi-hospital"></i> จัดการแผนก</a>
+        </div>
+    </div>
+
+    <!-- ===== สรุปตัวเลข ===== -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="ad-card ad-stat">
+                <div class="lbl"><i class="bi bi-people-fill text-primary"></i> ผู้ใช้งานที่ใช้งานอยู่</div>
+                <div class="val">@Model.ActiveUsers</div>
+                <div class="sub">ทั้งหมดในระบบ</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="ad-card ad-stat">
+                <div class="lbl"><i class="bi bi-person-slash text-secondary"></i> ผู้ใช้ที่ปิดใช้งาน</div>
+                <div class="val">@Model.InactiveUsers</div>
+                <div class="sub"><a asp-controller="Users" asp-action="Inactive">ดูรายการ</a></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="ad-card ad-stat">
+                <div class="lbl"><i class="bi bi-hospital-fill text-success"></i> แผนกที่ใช้งานอยู่</div>
+                <div class="val">@Model.ActiveDepartments</div>
+                <div class="sub">แผนก</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="ad-card ad-stat">
+                <div class="lbl"><i class="bi bi-building-slash text-secondary"></i> แผนกที่ปิดใช้งาน</div>
+                <div class="val">@Model.InactiveDepartments</div>
+                <div class="sub"><a asp-controller="Departments" asp-action="Inactive">ดูรายการ</a></div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.OtherRoleCount > 0)
+    {
+        <div class="alert alert-warning py-2 mb-3">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            พบผู้ใช้ @Model.OtherRoleCount คนที่ค่าหน้าที่ในฐานข้อมูลไม่ถูกต้อง
+            (@(string.Join(", ", Model.OtherRoles.Select(kv => kv.Key + " x" + kv.Value)))) —
+            ระบบมีหน้าที่แค่ Admin, Pharmacist, Staff กรุณาแก้ที่ <a asp-controller="Users" asp-action="Index">หน้าจัดการผู้ใช้งาน</a>
+        </div>
+    }
+
+    <!-- ===== ผู้ใช้แยกตามหน้าที่ (เต็มความกว้าง) ===== -->
+    <div class="ad-card mb-4" style="height:auto;">
+        <div class="ad-title">
+            <i class="bi bi-person-badge-fill text-primary"></i> ผู้ใช้แยกตามหน้าที่
+            <span class="badge bg-light text-dark border ms-1">ทั้งหมด @Model.ActiveUsers คน</span>
+        </div>
+
+        <div class="role-stack" title="สัดส่วนผู้ใช้ตามหน้าที่">
+            @if (Model.AdminCount > 0)
+            {
+                <span style="flex:@Model.AdminCount; background:#DC2626;"></span>
+            }
+            @if (Model.PharmacistCount > 0)
+            {
+                <span style="flex:@Model.PharmacistCount; background:#16A34A;"></span>
+            }
+            @if (Model.StaffCount > 0)
+            {
+                <span style="flex:@Model.StaffCount; background:#2563EB;"></span>
+            }
+        </div>
+
+        @{
+            string colCls = "col-12 col-md-4";
+        }
+        <div class="row g-3">
+            <div class="@colCls">
+                <div class="role-item">
+                    <span class="rl rl-admin">ผู้ดูแลระบบ</span>
+                    <div><div class="role-count">@Model.AdminCount <small>คน</small></div><div class="role-pct">@(Model.AdminCount * 100 / totalRole)%</div></div>
+                </div>
+            </div>
+            <div class="@colCls">
+                <div class="role-item">
+                    <span class="rl rl-pharma">เภสัชกร</span>
+                    <div><div class="role-count">@Model.PharmacistCount <small>คน</small></div><div class="role-pct">@(Model.PharmacistCount * 100 / totalRole)%</div></div>
+                </div>
+            </div>
+            <div class="@colCls">
+                <div class="role-item">
+                    <span class="rl rl-staff">เจ้าหน้าที่</span>
+                    <div><div class="role-count">@Model.StaffCount <small>คน</small></div><div class="role-pct">@(Model.StaffCount * 100 / totalRole)%</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== แผนกในระบบ (เต็มความกว้าง แสดงทั้งหมดไม่ต้องเลื่อน) ===== -->
+    <div class="ad-card mb-4" style="height:auto;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div class="ad-title m-0"><i class="bi bi-hospital-fill text-success"></i> แผนกในระบบ (@Model.Departments.Count)</div>
+            <form method="get" asp-action="Index" class="d-flex align-items-center gap-2">
+                <label class="mini mb-0">เลือกแผนก</label>
+                <select name="dept" class="form-select form-select-sm" style="min-width:220px;" onchange="this.form.submit()">
+                    <option value="">-- เลือกเพื่อดูรายชื่อ --</option>
+                    @foreach (var d in Model.Departments)
+                    {
+                        <option value="@d.Id" selected="@(Model.SelectedDepartmentId == d.Id)">@d.Name (@d.MemberCount คน)</option>
+                    }
+                    @if (Model.UsersWithoutDepartment > 0)
+                    {
+                        <option value="none" selected="@(Model.SelectedDepartmentId == "none")">ไม่ระบุแผนก (@Model.UsersWithoutDepartment คน)</option>
+                    }
+                </select>
+            </form>
+        </div>
+
+        @if (Model.Departments.Count == 0)
+        {
+            <div class="text-muted text-center py-4">ยังไม่มีแผนกที่ใช้งานอยู่ในระบบ</div>
+        }
+        <div class="dept-list">
+            @foreach (var d in Model.Departments)
+            {
+                int pct = d.MemberCount * 100 / maxMembers;
+                <a asp-action="Index" asp-route-dept="@d.Id" class="dept-row @(Model.SelectedDepartmentId == d.Id ? "active" : "")">
+                    <span class="dept-ico"><i class="bi bi-building"></i></span>
+                    <span class="dept-name">@d.Name</span>
+                    <span class="dept-bar"><span style="width:@(pct)%"></span></span>
+                    <span class="dept-num @(d.MemberCount == 0 ? "zero" : "")">@d.MemberCount <small>คน</small></span>
+                    <i class="bi bi-chevron-right dept-go"></i>
+                </a>
+            }
+            @if (Model.UsersWithoutDepartment > 0)
+            {
+                <a asp-action="Index" asp-route-dept="none" class="dept-row none @(Model.SelectedDepartmentId == "none" ? "active" : "")">
+                    <span class="dept-ico"><i class="bi bi-question-circle"></i></span>
+                    <span class="dept-name text-muted">ไม่ระบุแผนก</span>
+                    <span class="dept-bar"><span style="width:@(Model.UsersWithoutDepartment * 100 / maxMembers)%"></span></span>
+                    <span class="dept-num">@Model.UsersWithoutDepartment <small>คน</small></span>
+                    <i class="bi bi-chevron-right dept-go"></i>
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- ===== รายชื่อสมาชิกของแผนกที่เลือก ===== -->
+    <div class="ad-card">
+        @if (string.IsNullOrEmpty(Model.SelectedDepartmentId))
+        {
+            <div class="text-muted text-center py-4">
+                <i class="bi bi-hand-index fs-3 d-block mb-2"></i>
+                เลือกแผนกจากรายการด้านบนเพื่อดูรายชื่อผู้ใช้งานในแผนกนั้น
+            </div>
+        }
+        else
+        {
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div class="ad-title m-0">
+                    <i class="bi bi-people text-primary"></i> รายชื่อผู้ใช้งานในแผนก: @Model.SelectedDepartmentName
+                    <span class="badge bg-primary ms-1">@Model.Members.Count คน</span>
+                </div>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i> ล้างการเลือก</a>
+            </div>
+
+            @if (Model.SelectedDepartment != null && Model.SelectedDepartment.InactiveMemberCount > 0)
+            {
+                <div class="mini mb-2">มีผู้ใช้ที่ปิดใช้งานในแผนกนี้อีก @Model.SelectedDepartment.InactiveMemberCount คน (<a asp-controller="Users" asp-action="Inactive">ดูรายการที่ปิดใช้งาน</a>)</div>
+            }
+
+            <div class="table-responsive">
+                <table class="mem-table">
+                    <thead>
+                        <tr>
+                            <th>รหัส</th>
+                            <th>ชื่อ-นามสกุล</th>
+                            <th>ชื่อผู้ใช้</th>
+                            <th>หน้าที่</th>
+                            <th>เบอร์โทรศัพท์</th>
+                            <th>อีเมล</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Members.Count == 0)
+                        {
+                            <tr><td colspan="7" class="text-center text-muted py-4">ยังไม่มีผู้ใช้งานในแผนกนี้</td></tr>
+                        }
+                        @foreach (var u in Model.Members)
+                        {
+                            <tr>
+                                <td class="text-muted">#@u.User_id</td>
+                                <td class="fw-semibold">@u.Title@u.Firstname @u.Lastname</td>
+                                <td>@u.Username</td>
+                                <td><span class="rl @RoleClass(u.Role)">@RoleText(u.Role)</span></td>
+                                <td>@(string.IsNullOrEmpty(u.P_number) ? "-" : u.P_number)</td>
+                                <td>@(string.IsNullOrEmpty(u.Em) ? "-" : u.Em)</td>
+                                <td class="text-end">
+                                    <a asp-controller="Users" asp-action="Edit" asp-route-id="@u.User_id" class="btn btn-sm btn-outline-primary" title="แก้ไข"><i class="bi bi-pencil-square"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

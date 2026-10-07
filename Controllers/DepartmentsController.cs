@@ -20,7 +20,21 @@ namespace DrugInventoryPro.Controllers
         // GET: Departments
         public async Task<IActionResult> Index()
         {
-            var list = await _context.Departments.ToListAsync();
+            // แสดงเฉพาะแผนกที่ใช้งานอยู่ (แผนกที่ปิดใช้งานดูได้ที่หน้า Inactive)
+            var list = await _context.Departments
+                .Where(d => d.Status != "Inactive")
+                .OrderBy(d => d.Department_id)
+                .ToListAsync();
+            return View(list);
+        }
+
+        // GET: Departments/Inactive — รายการแผนกที่ปิดใช้งาน
+        public async Task<IActionResult> Inactive()
+        {
+            var list = await _context.Departments
+                .Where(d => d.Status == "Inactive")
+                .OrderBy(d => d.Department_id)
+                .ToListAsync();
             return View(list);
         }
 
@@ -61,6 +75,7 @@ namespace DrugInventoryPro.Controllers
                     return View(department);
                 }
 
+                department.Status = "Active";
                 department.Created_at = DateTime.Now;
                 department.Updated_at = DateTime.Now;
 
@@ -93,47 +108,60 @@ namespace DrugInventoryPro.Controllers
 
             if (ModelState.IsValid)
             {
-                try
-                {
-                    department.Updated_at = DateTime.Now; // อัปเดตเวลาปัจจุบันเมื่อมีการแก้ไข
-                    _context.Update(department);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!await _context.Departments.AnyAsync(e => e.Department_id == department.Department_id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
+                var existing = await _context.Departments.FindAsync(id);
+                if (existing == null) return NotFound();
+
+                // 🛡️ คัดลอกเฉพาะฟิลด์ที่แก้ไขได้ (คง Created_at และ Status เดิม ไม่ให้ถูกเขียนทับเป็นค่าว่าง)
+                existing.Department_name = department.Department_name;
+                existing.Contact_title = department.Contact_title;
+                existing.Contact_firstname = department.Contact_firstname;
+                existing.Contact_lastname = department.Contact_lastname;
+                existing.Phone_number = department.Phone_number;
+                existing.Updated_at = DateTime.Now;
+
+                await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
             return View(department);
         }
 
-        // GET: Departments/Delete/5
-        // หมายเหตุ: หน้า Index ใช้แท็ก <a> ลบข้อมูล จึงต้องเป็น GET Method
-        public async Task<IActionResult> Delete(string id)
+        // ❌ ไม่มีการลบแผนกออกจากระบบ: ใช้ "ปิดใช้งาน" แทน เพื่อรักษาข้อมูลแผนกและเจ้าหน้าที่ผู้ติดต่อ
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Deactivate(string id)
         {
             var department = await _context.Departments.FindAsync(id);
-            if (department != null)
+            if (department == null) return NotFound();
+
+            // 🛡️ ห้ามปิดแผนกที่ยังมีผู้ใช้งานที่ใช้งานอยู่
+            int activeUsers = await _context.Users.CountAsync(u => u.Department_id == id && u.Status != "Inactive");
+            if (activeUsers > 0)
             {
-                try
-                {
-                    _context.Departments.Remove(department);
-                    await _context.SaveChangesAsync();
-                }
-                catch (Exception ex)
-                {
-                    // ดักจับ Error ในกรณีที่แผนกนี้ไปผูกกับใบเบิกยาหรือผู้ใช้งานอื่นอยู่ จะลบไม่ได้
-                    TempData["ErrorMessage"] = "ไม่สามารถลบแผนกนี้ได้ เนื่องจากข้อมูลถูกนำไปใช้งานในระบบแล้ว: " + ex.Message;
-                }
+                TempData["ErrorMessage"] = $"ไม่สามารถปิดใช้งานแผนก '{department.Department_name}' ได้ เพราะยังมีผู้ใช้งานที่ใช้งานอยู่ {activeUsers} คน กรุณาย้ายแผนกหรือปิดใช้งานผู้ใช้เหล่านั้นก่อน";
+                return RedirectToAction(nameof(Index));
             }
+
+            department.Status = "Inactive";
+            department.Updated_at = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"ปิดใช้งานแผนก '{department.Department_name}' เรียบร้อยแล้ว (ข้อมูลยังอยู่ในระบบ)";
             return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Reactivate(string id)
+        {
+            var department = await _context.Departments.FindAsync(id);
+            if (department == null) return NotFound();
+
+            department.Status = "Active";
+            department.Updated_at = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"เปิดใช้งานแผนก '{department.Department_name}' อีกครั้งเรียบร้อยแล้ว";
+            return RedirectToAction(nameof(Inactive));
         }
     }
 }

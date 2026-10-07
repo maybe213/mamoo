@@ -1,7 +1,7 @@
 ﻿@model List<DrugInventoryPro.Models.User>
 
 @{
-    ViewData["Title"] = "จัดการผู้ใช้งาน";
+    ViewData["Title"] = "ผู้ใช้งานที่ปิดใช้งาน";
 }
 
 <style>
@@ -114,21 +114,6 @@
 
 <div class="dashboard-wrapper mt-4 container-fluid p-4">
 
-    <!-- ระบบแจ้งเตือนกรณี "ลบข้อมูลไม่ได้" -->
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm rounded-3 mb-4" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="bi bi-exclamation-octagon-fill fs-5 me-2"></i>
-                <div>
-                    <strong>ไม่สามารถดำเนินการได้</strong>
-                    <div class="small text-muted mt-1">@TempData["ErrorMessage"]</div>
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
-
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm rounded-3 mb-4" role="alert">
@@ -137,22 +122,16 @@
         </div>
     }
 
-    <!-- Header Section -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="fw-bold fs-4 text-dark">
-            <i class="bi bi-people-fill text-primary me-2"></i> จัดการผู้ใช้งานระบบ
+            <i class="bi bi-person-slash text-secondary me-2"></i> ผู้ใช้งานที่ปิดใช้งาน
+            <span class="badge bg-secondary ms-2 fs-6">@Model.Count</span>
         </div>
-        <div class="d-flex gap-2">
-            <a asp-action="Inactive" class="btn btn-outline-secondary btn-sm d-flex align-items-center fw-bold px-3 py-2 rounded-pill">
-                <i class="bi bi-person-slash me-2"></i> ผู้ใช้ที่ปิดใช้งาน
-            </a>
-            <a asp-action="Create" class="btn btn-primary btn-sm d-flex align-items-center fw-bold px-3 py-2 rounded-pill">
-                <i class="bi bi-person-plus-fill me-2"></i> เพิ่มผู้ใช้ใหม่
-            </a>
-        </div>
+        <a asp-action="Index" class="btn btn-outline-primary btn-sm d-flex align-items-center fw-bold px-3 py-2 rounded-pill">
+            <i class="bi bi-arrow-left me-2"></i> กลับไปรายชื่อผู้ใช้
+        </a>
     </div>
 
-    <!-- Table Section -->
     <div class="table-container">
         <div class="table-responsive">
             <table class="table-user text-center mb-0">
@@ -167,8 +146,11 @@
                         <th>จัดการ</th>
                     </tr>
                 </thead>
-
                 <tbody>
+                    @if (Model.Count == 0)
+                    {
+                        <tr><td colspan="7" class="text-muted py-4">ไม่มีผู้ใช้งานที่ปิดใช้งาน</td></tr>
+                    }
                     @foreach (var item in Model)
                     {
                         <tr>
@@ -177,12 +159,8 @@
                                 <div class="fw-bold text-dark">@item.Username</div>
                                 <small class="text-muted">@item.Em</small>
                             </td>
-                            <td class="fw-bold text-start text-dark">
-                                @item.Title@item.Firstname @item.Lastname
-                            </td>
-                            <td>
-                                <span class="text-dark">@item.Departments?.Department_name</span>
-                            </td>
+                            <td class="fw-bold text-start text-dark">@item.Title@item.Firstname @item.Lastname</td>
+                            <td>@item.Departments?.Department_name</td>
                             <td class="fw-bold">@item.P_number</td>
                             <td>
                                 @if (item.Role == "Admin")
@@ -191,24 +169,24 @@
                                 }
                                 else if (item.Role == "Pharmacist")
                                 {
+
                                     <span class="badge-role bg-pharma">PHARMACIST</span>
                                 }
                                 else
                                 {
+
                                     <span class="badge-role bg-staff">STAFF</span>
                                 }
                             </td>
                             <td>
                                 <div class="d-inline-flex gap-1">
-                                    <a asp-action="Edit" asp-route-id="@item.User_id"
-                                       class="btn btn-sm btn-theme-edit" title="แก้ไข">
+                                    <a asp-action="Edit" asp-route-id="@item.User_id" class="btn btn-sm btn-theme-edit" title="แก้ไข">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
-
-                                    <form asp-action="Deactivate" asp-route-id="@item.User_id" method="post" class="d-inline"
-                                          onsubmit="return confirm('ยืนยันการปิดใช้งานผู้ใช้: @item.Title@item.Firstname @item.Lastname?\nข้อมูลยังอยู่ในระบบ และเปิดใช้งานอีกครั้งได้ภายหลัง')">
-                                        <button type="submit" class="btn btn-sm btn-theme-del" title="ปิดใช้งาน">
-                                            <i class="bi bi-slash-circle-fill"></i>
+                                    <form asp-action="Reactivate" asp-route-id="@item.User_id" method="post" class="d-inline"
+                                          onsubmit="return confirm('เปิดใช้งานผู้ใช้: @item.Title@item.Firstname @item.Lastname อีกครั้ง?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-success" title="เปิดใช้งานอีกครั้ง">
+                                            <i class="bi bi-arrow-counterclockwise"></i> เปิดใช้งาน
                                         </button>
                                     </form>
                                 </div>
@@ -220,6 +198,3 @@
         </div>
     </div>
 </div>
-
-@* นำเข้า Bootstrap Icons *@
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">

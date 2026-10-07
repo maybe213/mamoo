@@ -318,8 +318,8 @@
         }
 
         /* ============================================================
-                           ===== สถานะ "พับเก็บ" (COLLAPSED) ของ Sidebar =====
-                           ============================================================ */
+                                   ===== สถานะ "พับเก็บ" (COLLAPSED) ของ Sidebar =====
+                                   ============================================================ */
         .sidebar.collapsed {
             width: var(--sidebar-collapsed-width);
         }
@@ -469,31 +469,43 @@
 
             <div class="sidebar-menu-scroll">
 
-                <p class="nav-label"><i class="bi bi-grid-fill"></i> <span class="menu-text">เมนูหลัก</span></p>
-                <a asp-controller="Dashboard"
-                   asp-action="Index"
-                   data-title="หน้าแรก (Dashboard)"
-                   class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" ? "active-outlined" : "")">
-                    <i class="bi bi-speedometer2"></i> <span class="menu-text">หน้าแรก (Dashboard)</span>
-                </a>
-                <a asp-controller="Trends"
-                   asp-action="Index"
-                   data-title="แนวโน้มโรคและความเสี่ยง"
-                   class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Trends" ? "active-outlined" : "")">
-                    <i class="bi bi-graph-up-arrow"></i> <span class="menu-text">แนวโน้มโรคและความเสี่ยง</span>
-                </a>
-                @if (role == "Admin" || role == "Pharmacist")
+                @* เมนูหลัก (Dashboard / แนวโน้ม / รายงาน) สำหรับเภสัชกรและเจ้าหน้าที่เท่านั้น — Admin ไม่แสดง *@
+                @if (role != "Admin")
                 {
-                    <a asp-controller="Reports"
+                    <p class="nav-label"><i class="bi bi-grid-fill"></i> <span class="menu-text">เมนูหลัก</span></p>
+                    <a asp-controller="Dashboard"
                        asp-action="Index"
-                       data-title="รายงานประจำเดือน/ปี"
-                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Reports" ? "active-outlined" : "")">
-                        <i class="bi bi-file-earmark-bar-graph"></i> <span class="menu-text">รายงานประจำเดือน/ปี</span>
+                       data-title="หน้าแรก (Dashboard)"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Dashboard" ? "active-outlined" : "")">
+                        <i class="bi bi-speedometer2"></i> <span class="menu-text">หน้าแรก (Dashboard)</span>
                     </a>
+                    <a asp-controller="Trends"
+                       asp-action="Index"
+                       data-title="แนวโน้มโรคและความเสี่ยง"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Trends" ? "active-outlined" : "")">
+                        <i class="bi bi-graph-up-arrow"></i> <span class="menu-text">แนวโน้มโรคและความเสี่ยง</span>
+                    </a>
+                    if (role == "Pharmacist")
+                    {
+                        <a asp-controller="Reports"
+                           asp-action="Index"
+                           data-title="รายงานประจำเดือน/ปี"
+                           class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Reports" ? "active-outlined" : "")">
+                            <i class="bi bi-file-earmark-bar-graph"></i> <span class="menu-text">รายงานประจำเดือน/ปี</span>
+                        </a>
+                    }
                 }
 
                 @if (role == "Admin")
                 {
+                    <p class="nav-label"><i class="bi bi-grid-fill"></i> <span class="menu-text">เมนูหลัก</span></p>
+                    <a asp-controller="AdminDashboard"
+                       asp-action="Index"
+                       data-title="หน้าแรก (ผู้ดูแลระบบ)"
+                       class="menu-outlined @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AdminDashboard" ? "active-outlined" : "")">
+                        <i class="bi bi-speedometer2"></i> <span class="menu-text">หน้าแรก (ผู้ดูแลระบบ)</span>
+                    </a>
+
                     <p class="nav-label"><i class="bi bi-gear-fill"></i> <span class="menu-text">จัดการระบบ</span></p>
                     <a asp-controller="Users"
                        asp-action="Index"

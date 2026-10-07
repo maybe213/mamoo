@@ -28,7 +28,7 @@ namespace DrugInventoryPro.Controllers
         private bool CanAccess()
         {
             var role = HttpContext.Session.GetString("Role");
-            return role == "Admin" || role == "Pharmacist";
+            return role == "Pharmacist";
         }
 
         [HttpGet]

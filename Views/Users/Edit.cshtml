@@ -143,8 +143,8 @@
                     <span asp-validation-for="Username" class="text-danger small"></span>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-group-label"><i class="bi bi-key-fill"></i> รหัสผ่าน</label>
-                    <input asp-for="Password" type="password" class="form-control" required />
+                    <label class="form-group-label"><i class="bi bi-key-fill"></i> รหัสผ่านใหม่ (เว้นว่างหากไม่เปลี่ยน)</label>
+                    <input asp-for="Password" type="password" class="form-control" placeholder="เว้นว่างไว้เพื่อใช้รหัสผ่านเดิม" autocomplete="new-password" />
                     <span asp-validation-for="Password" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">

@@ -103,7 +103,7 @@
         border: 1px solid #FECACA;
     }
 
-    /* Action Buttons (แก้ไข / ลบ) */
+    /* Action Buttons (แก้ไข / ปิดใช้งาน) */
     .btn-action {
         width: 36px;
         height: 36px;
@@ -147,11 +147,24 @@
         </div>
     }
 
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert" style="border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     <div class="d-flex justify-content-between align-items-center page-header">
         <h3 class="m-0 fw-bold" style="color: var(--color-primary);">รายชื่อแผนกในระบบ</h3>
-        <a asp-action="Create" class="btn-create-primary shadow-sm">
-            <i class="bi bi-building-add me-2"></i> เพิ่มแผนกใหม่
-        </a>
+        <div class="d-flex gap-2">
+            <a asp-action="Inactive" class="btn btn-outline-secondary d-flex align-items-center" style="border-radius: 10px;">
+                <i class="bi bi-building-slash me-2"></i> แผนกที่ปิดใช้งาน
+            </a>
+            <a asp-action="Create" class="btn-create-primary shadow-sm">
+                <i class="bi bi-building-add me-2"></i> เพิ่มแผนกใหม่
+            </a>
+        </div>
     </div>
 
     <div class="table-container shadow-sm">
@@ -215,11 +228,12 @@
                                            class="btn-action btn-edit-action" title="แก้ไข">
                                             <i class="bi bi-pencil-square"></i>
                                         </a>
-                                        <a asp-action="Delete" asp-route-id="@item.Department_id"
-                                           class="btn-action btn-delete-action"
-                                           onclick="return confirm('คุณต้องการลบแผนก @item.Department_name ใช่หรือไม่?')" title="ลบ">
-                                            <i class="bi bi-trash3-fill"></i>
-                                        </a>
+                                        <form asp-action="Deactivate" asp-route-id="@item.Department_id" method="post" class="d-inline"
+                                              onsubmit="return confirm('ยืนยันการปิดใช้งานแผนก @item.Department_name ?\nข้อมูลยังอยู่ในระบบ และเปิดใช้งานอีกครั้งได้ภายหลัง')">
+                                            <button type="submit" class="btn-action btn-delete-action" title="ปิดใช้งาน">
+                                                <i class="bi bi-slash-circle-fill"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>

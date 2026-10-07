@@ -25,6 +25,9 @@ namespace DrugInventoryPro.Models
         //  Connection to Department
         public string? Department_id { get; set; }
 
+        // สถานะบัญชี: Active = ใช้งานได้ / Inactive = ปิดใช้งาน (ห้ามลบผู้ใช้ออกจากระบบ ให้ปิดใช้งานแทน)
+        public string? Status { get; set; } = "Active";
+
         [ForeignKey("Department_id")] // ผูกให้ตรงกับชื่อ Property ด้านบนครับ
         public Departments? Departments { get; set; }
     }

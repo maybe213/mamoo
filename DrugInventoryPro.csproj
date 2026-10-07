@@ -27,6 +27,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Filters\" />
+    <Folder Include="Services\" />
+    <Folder Include="Views\AdminDashboard\" />
     <Folder Include="Views\using Microsoft.AspNetCore.Mvc%3b\" />
   </ItemGroup>
 

@@ -1,0 +1,180 @@
+﻿@model List<DrugInventoryPro.Models.Departments>
+
+@{
+    ViewData["Title"] = "แผนกที่ปิดใช้งาน";
+}
+
+<style>
+    :root {
+        --theme-primary: #0d6efd;
+        --theme-primary-hover: #0b5ed7;
+        --theme-dark: #212529;
+        --theme-light-bg: #f8f9fa;
+        --theme-hover-bg: #f1f8ff;
+        --theme-border: #dee2e6;
+    }
+
+    body {
+        background-color: var(--theme-light-bg);
+        font-family: 'Sarabun', sans-serif;
+    }
+
+    /* Table Container & Base Styling */
+    .table-container {
+        background: #ffffff;
+        padding: 25px;
+        border-radius: 16px;
+        border: 1px solid var(--theme-border);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+
+    .table-user {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+        .table-user thead th {
+            background: var(--theme-dark);
+            color: #ffffff;
+            padding: 15px;
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            border: none;
+        }
+
+        .table-user tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+            .table-user tbody tr:hover {
+                background-color: var(--theme-hover-bg) !important;
+            }
+
+        .table-user td {
+            padding: 15px !important;
+            border-bottom: 1px solid var(--theme-border);
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+    /* Role Badges */
+    .badge-role {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: bold;
+        font-size: 0.75rem;
+        display: inline-block;
+        min-width: 85px;
+    }
+
+    .bg-admin {
+        background: var(--theme-dark);
+        color: #ffffff;
+    }
+
+    .bg-pharma {
+        background: var(--theme-primary);
+        color: #ffffff;
+    }
+
+    .bg-staff {
+        background: #e9ecef;
+        color: var(--theme-dark);
+        border: 1px solid var(--theme-border);
+    }
+
+    /* Action Buttons (ตรงตามคลังยา) */
+    .btn-theme-edit {
+        background: var(--theme-dark);
+        color: #ffffff;
+        border: none;
+        transition: all 0.2s ease;
+    }
+
+        .btn-theme-edit:hover {
+            background: var(--theme-primary);
+            color: #ffffff;
+        }
+
+    .btn-theme-del {
+        border: 1px solid #dc3545;
+        color: #dc3545;
+        background: transparent;
+        transition: all 0.2s ease;
+    }
+
+        .btn-theme-del:hover {
+            background: #dc3545;
+            color: #ffffff;
+        }
+</style>
+
+<div class="dashboard-wrapper mt-4 container-fluid p-4">
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm rounded-3 mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="fw-bold fs-4 text-dark">
+            <i class="bi bi-building-slash text-secondary me-2"></i> แผนกที่ปิดใช้งาน
+            <span class="badge bg-secondary ms-2 fs-6">@Model.Count</span>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-primary btn-sm d-flex align-items-center fw-bold px-3 py-2 rounded-pill">
+            <i class="bi bi-arrow-left me-2"></i> กลับไปรายการแผนก
+        </a>
+    </div>
+
+    <div class="table-container">
+        <div class="table-responsive">
+            <table class="table-user text-center mb-0">
+                <thead>
+                    <tr>
+                        <th>รหัส</th>
+                        <th class="text-start">ชื่อแผนก</th>
+                        <th class="text-start">เจ้าหน้าที่ผู้ติดต่อ</th>
+                        <th>เบอร์โทรศัพท์</th>
+                        <th>แก้ไขล่าสุด</th>
+                        <th>จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Count == 0)
+                    {
+                        <tr><td colspan="6" class="text-muted py-4">ไม่มีแผนกที่ปิดใช้งาน</td></tr>
+                    }
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold text-muted">#@item.Department_id</td>
+                            <td class="fw-bold text-start text-dark">@item.Department_name</td>
+                            <td class="text-start">@item.Contact_title@item.Contact_firstname @item.Contact_lastname</td>
+                            <td class="fw-bold">@item.Phone_number</td>
+                            <td>@(item.Updated_at?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                            <td>
+                                <div class="d-inline-flex gap-1">
+                                    <a asp-action="Edit" asp-route-id="@item.Department_id" class="btn btn-sm btn-theme-edit" title="แก้ไข">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <form asp-action="Reactivate" asp-route-id="@item.Department_id" method="post" class="d-inline"
+                                          onsubmit="return confirm('เปิดใช้งานแผนก: @item.Department_name อีกครั้ง?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-success" title="เปิดใช้งานอีกครั้ง">
+                                            <i class="bi bi-arrow-counterclockwise"></i> เปิดใช้งาน
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

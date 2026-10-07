@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc.Rendering; // 🆕 เพิ่มเพื่อใช้งาน SelectList
 using Microsoft.AspNetCore.Http;
+using DrugInventoryPro.Services;
 
 namespace DrugInventoryPro.Controllers
 {
@@ -24,9 +25,27 @@ namespace DrugInventoryPro.Controllers
         {
             if (_context.Users == null) return NotFound();
 
+            // แสดงเฉพาะผู้ใช้ที่ยังใช้งานอยู่ (ผู้ที่ปิดใช้งานดูได้ที่หน้า Inactive)
             var users = _context.Users
                 .Include(u => u.Departments)
                 .AsNoTracking()
+                .Where(u => u.Status != "Inactive")
+                .OrderBy(u => u.User_id)
+                .ToList();
+
+            return View(users);
+        }
+
+        // รายชื่อผู้ใช้ที่ปิดใช้งาน
+        public IActionResult Inactive()
+        {
+            if (_context.Users == null) return NotFound();
+
+            var users = _context.Users
+                .Include(u => u.Departments)
+                .AsNoTracking()
+                .Where(u => u.Status == "Inactive")
+                .OrderBy(u => u.User_id)
                 .ToList();
 
             return View(users);
@@ -70,6 +89,13 @@ namespace DrugInventoryPro.Controllers
         public IActionResult Create(User u)
         {
             ModelState.Remove("User_id");
+
+            // 🛡️ หน้าที่ต้องเป็น Admin / Pharmacist / Staff เท่านั้น
+            var normalizedRole = RoleHelper.Normalize(u.Role);
+            if (normalizedRole == null)
+                ModelState.AddModelError("Role", "กรุณาเลือกหน้าที่เป็น Admin, Pharmacist หรือ Staff");
+            else
+                u.Role = normalizedRole;
 
             // 🛡️ ชื่อผู้ใช้ต้องไม่ซ้ำ (ใช้ล็อกอิน)
             if (!string.IsNullOrWhiteSpace(u.Username) &&
@@ -178,7 +204,7 @@ namespace DrugInventoryPro.Controllers
             if (user == null) return NotFound();
 
             // 🛠️ แก้ไข: ปรับหน้าแก้ไขให้เป็น SelectList 
-            ViewBag.Departments = new SelectList(GetUniqueDepartments(), "Department_id", "Department_name", user.Department_id);
+            ViewBag.Departments = new SelectList(GetUniqueDepartments(user.Department_id), "Department_id", "Department_name", user.Department_id);
             return View(user);
         }
 
@@ -187,6 +213,13 @@ namespace DrugInventoryPro.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult Edit(User u)
         {
+            // 🛡️ หน้าที่ต้องเป็น Admin / Pharmacist / Staff เท่านั้น
+            var normalizedRole = RoleHelper.Normalize(u.Role);
+            if (normalizedRole == null)
+                ModelState.AddModelError("Role", "กรุณาเลือกหน้าที่เป็น Admin, Pharmacist หรือ Staff");
+            else
+                u.Role = normalizedRole;
+
             // 🛡️ ชื่อผู้ใช้ต้องไม่ซ้ำกับคนอื่น
             if (!string.IsNullOrWhiteSpace(u.Username) &&
                 _context.Users != null && _context.Users.Any(x => x.Username == u.Username && x.User_id != u.User_id))
@@ -202,58 +235,86 @@ namespace DrugInventoryPro.Controllers
                 var existing = _context.Users?.Find(u.User_id);
                 if (existing == null) return NotFound();
 
-                // 🛡️ ถ้าไม่ได้กรอกรหัสผ่านใหม่ ให้คงรหัสผ่านเดิมไว้ (กันถูกเขียนทับเป็นค่าว่าง)
-                var oldPassword = existing.Password;
-                _context.Entry(existing).CurrentValues.SetValues(u);
-                if (string.IsNullOrWhiteSpace(u.Password))
-                    existing.Password = oldPassword;
+                // 🛡️ คัดลอกเฉพาะฟิลด์ที่อนุญาตให้แก้ไข (ไม่แตะ Status ผ่านหน้านี้ ต้องใช้ปุ่มปิด/เปิดใช้งาน)
+                existing.Username = u.Username;
+                existing.Role = u.Role;
+                existing.Title = u.Title;
+                existing.Firstname = u.Firstname;
+                existing.Lastname = u.Lastname;
+                existing.P_number = u.P_number;
+                existing.Em = u.Em;
+                existing.Department_id = u.Department_id;
+
+                // 🛡️ เปลี่ยนรหัสผ่านเฉพาะเมื่อกรอกใหม่ (เว้นว่าง = คงรหัสผ่านเดิม)
+                if (!string.IsNullOrWhiteSpace(u.Password))
+                    existing.Password = u.Password;
 
                 _context.SaveChanges();
                 return RedirectToAction("Index");
             }
 
             // 🛠️ แก้ไข: ปรับตรงนี้ให้เป็น SelectList 
-            ViewBag.Departments = new SelectList(GetUniqueDepartments(), "Department_id", "Department_name", u.Department_id);
+            ViewBag.Departments = new SelectList(GetUniqueDepartments(u.Department_id), "Department_id", "Department_name", u.Department_id);
             return View(u);
         }
 
-        // ลบ
-        public IActionResult Delete(string id)
+        // ❌ ไม่มีการลบผู้ใช้ออกจากระบบ: ใช้ "ปิดใช้งาน" แทน เพื่อรักษาประวัติการทำรายการ
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Deactivate(string id)
         {
             if (_context.Users == null) return NotFound();
 
             var user = _context.Users.Find(id);
             if (user == null) return NotFound();
 
-            // 🛡️ ห้ามลบบัญชีของตัวเองที่กำลังล็อกอินอยู่
+            // 🛡️ ห้ามปิดใช้งานบัญชีของตัวเองที่กำลังล็อกอินอยู่
             if (!string.IsNullOrEmpty(user.Username) &&
                 user.Username == HttpContext.Session.GetString("Username"))
             {
-                TempData["ErrorMessage"] = "ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่ได้";
+                TempData["ErrorMessage"] = "ไม่สามารถปิดใช้งานบัญชีที่กำลังใช้งานอยู่ได้";
                 return RedirectToAction("Index");
             }
 
-            try
+            // 🛡️ ต้องเหลือ Admin ที่ใช้งานได้อย่างน้อย 1 คน
+            if (user.Role == "Admin" &&
+                !_context.Users.Any(x => x.User_id != id && x.Role == "Admin" && x.Status != "Inactive"))
             {
-                _context.Users.Remove(user);
-                _context.SaveChanges();
+                TempData["ErrorMessage"] = "ต้องมีผู้ดูแลระบบ (Admin) ที่ใช้งานอยู่อย่างน้อย 1 คน";
                 return RedirectToAction("Index");
             }
-            catch (DbUpdateException)
-            {
-                string userFullName = $"{user.Title}{user.Firstname} {user.Lastname}";
-                TempData["ErrorMessage"] = $"ผู้ใช้งานรหัส {id} ({userFullName}) มีประวัติผูกอยู่กับเอกสารธุรกรรมภายในคลัง จึงไม่สามารถลบออกจากระบบได้ เพื่อรักษาความถูกต้องของข้อมูลประวัติ";
-                return RedirectToAction("Index");
-            }
+
+            user.Status = "Inactive";
+            _context.SaveChanges();
+
+            TempData["SuccessMessage"] = $"ปิดใช้งานผู้ใช้ {user.Title}{user.Firstname} {user.Lastname} เรียบร้อยแล้ว (ข้อมูลยังอยู่ในระบบ)";
+            return RedirectToAction("Index");
         }
 
-        private List<Departments> GetUniqueDepartments()
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Reactivate(string id)
+        {
+            if (_context.Users == null) return NotFound();
+
+            var user = _context.Users.Find(id);
+            if (user == null) return NotFound();
+
+            user.Status = "Active";
+            _context.SaveChanges();
+
+            TempData["SuccessMessage"] = $"เปิดใช้งานผู้ใช้ {user.Title}{user.Firstname} {user.Lastname} อีกครั้งเรียบร้อยแล้ว";
+            return RedirectToAction("Inactive");
+        }
+
+        // แผนกที่เลือกได้: เฉพาะแผนกที่ใช้งานอยู่ (และแผนกปัจจุบันของผู้ใช้ แม้ปิดใช้งานแล้ว เพื่อไม่ให้ค่าเดิมหาย)
+        private List<Departments> GetUniqueDepartments(string? includeId = null)
         {
             if (_context.Departments == null) return new List<Departments>();
 
             return _context.Departments
                 .AsEnumerable()
-                .Where(d => d.Department_name != null)
+                .Where(d => d.Department_name != null && (d.Status != "Inactive" || d.Department_id == includeId))
                 .GroupBy(d => d.Department_name!.Trim())
                 .Select(g => g.First())
                 .OrderBy(d => d.Department_name)
